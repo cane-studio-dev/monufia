@@ -33,6 +33,10 @@ onAuthStateChanged(auth,async()=>{await loadU();nav();route()});
 
 R.home=async()=>{const n=(await all('news').catch(()=>[])).sort((a,b)=>b.ts-a.ts).slice(0,5);
 view(`<div class="card hero"><img src="icon.svg" width="90" alt=""><h1 style="margin:8px">مدرسين المنوفية المعتمدين</h1><p>امتحانات • مذكرات • دروس فيديو • جدول حصص • شهادات تقدير</p>${U?'<a class="btn" href="#/dash">لوحتي</a>':'<a class="btn" href="#/register">ابدأ الآن</a> <a class="btn" href="#/login">تسجيل الدخول</a>'}</div>
+<div class="demo"><div class="sc s1"><div class="cap">١ • وضع الامتحان: اختيار الإجابة الصحيحة</div><div class="qz">ما ناتج ٣ × ٤ ؟</div><div class="op"><span>٧</span></div><div class="op ok1"><span>١٢</span><em>✓ الإجابة الصحيحة</em></div><div class="op"><span>٩</span></div></div>
+<div class="sc s2"><div class="cap">٢ • الطالب يؤدي الامتحان والنظام يراقب الخروج</div><div class="tmr">⏱ ١٢:٤١</div><div class="exl">🚪 خرج من صفحة الامتحان</div><div class="lvw"><b class="l1">1 / 3</b><b class="l2">2 / 3</b><b class="l3">3 / 3</b></div><div class="cheat">⚠ غشاش</div></div>
+<div class="sc s3"><div class="cap">٣ • تصحيح المقالي بالكاميرا وظهور الدرجة</div><div class="ph">📷 ورقة الإجابة<i class="flash"></i></div><div class="upl">✓ تم رفع الإجابة</div><div class="gr">٩ / ١٠</div><div class="fbk">💬 أحسنت يا بطل، كمّل! 👏</div></div>
+<div class="dots"><i></i><i></i><i></i></div></div>
 ${n.map(x=>`<div class="card">📢 ${esc(x.body)}<br><small>${new Date(x.ts).toLocaleString('ar-EG')}</small></div>`).join('')}`)};
 R.dash=()=>{if(!U)return location.hash='#/login';location.hash='#/'+({admin:'admin',teacher:'teacher',student:'student'}[U.role])};
 
@@ -72,12 +76,27 @@ if(!qs.length)return toast('أضف سؤالاً واحداً على الأقل')
 await addDoc(collection(db,'exams'),{tid:U.id,tname:U.name,title:f.title.value,subject:f.subject.value,grade:f.grade.value,grp:f.grp.value.trim(),minutes:+f.minutes.value,start:f.start.value,end:f.end.value,descr:f.descr.value,only:f.only.value.split(',').map(norm).filter(Boolean),qs,a,createdAt:now()});
 toast('تم نشر الامتحان');route()}};
 
-R.results=async id=>{if(!need('teacher'))return;const e=await getDoc(doc(db,'exams',id));if(!e.exists()||e.data().tid!=U.id)return view('<div class="card">غير موجود</div>');
-const at=(await get('attempts','eid',id)).filter(x=>x.tid==U.id).sort((a,b)=>b.score-a.score),es=rows(await getDocs(query(collection(db,'essays'),where('tid','==',U.id),where('eid','==',id))));
-view(`<div class="card"><h3>${esc(e.data().title)}</h3><table><tr><th>الطالب</th><th>الدرجة</th><th>الخروج</th><th>المقالي</th></tr>${at.map(x=>`<tr><td>${esc(x.sname)} ${x.leaves>3?'<span class="bad">⚠ غشاش</span>':''}</td><td>${x.score}/${x.total}</td><td>${x.leaves}</td><td>
+R.results=async id=>{if(!need('teacher'))return;const ds=await getDoc(doc(db,'exams',id));if(!ds.exists()||ds.data().tid!=U.id)return view('<div class="card">غير موجود</div>');
+const e=ds.data(),at=(await get('attempts','eid',id)).filter(x=>x.tid==U.id).sort((a,b)=>b.score-a.score),es=rows(await getDocs(query(collection(db,'essays'),where('tid','==',U.id),where('eid','==',id))));
+const mm=s=>Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'),pc=x=>x.total?Math.round(100*x.score/x.total):0;
+const st=e.qs.map((q,k)=>{const tt=at.filter(x=>x.times&&x.times[k]!=null),avg=tt.length?tt.reduce((s,x)=>s+x.times[k],0)/tt.length:0;let ok=null;
+if(q.t=='mcq'){const aa=at.filter(x=>x.ans&&x.ans[k]!=null&&x.ans[k]!=-2);ok=aa.length?Math.round(100*aa.filter(x=>x.ans[k]==e.a[k]).length/aa.length):null}return{q,avg,ok}}),
+mx=Math.max(1,...st.map(x=>x.avg)),hard=st.reduce((b,x,i)=>x.avg>st[b].avg?i:b,0);
+view(`<div class="card"><h3>${esc(e.title)}</h3><p class="po">${esc(e.subject)} — ${esc(e.grade)} — المدرس: ${esc(U.name)} — ${new Date().toLocaleDateString('ar-EG')}</p>
+<div class="noprint"><button id="xl">📥 تصدير Excel</button> <button onclick="print()">🖨 طباعة / PDF</button></div>
+<table><tr><th>#</th><th>الطالب</th><th>الدرجة</th><th>النسبة</th><th>الخروج</th><th>ملاحظة المدرس</th><th class="noprint">التصحيح</th></tr>
+${at.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.sname)} ${x.leaves>3?'<span class="bad">⚠ غشاش</span>':''}</td><td>${x.score}/${x.total}</td><td>${pc(x)}%</td><td>${x.leaves}</td><td>${esc(x.feedback||'')}</td><td class="noprint">
 ${es.filter(s=>s.aid==x.id).sort((a,b)=>a.qi-b.qi).map(s=>`<details><summary>📷 سؤال ${s.qi+1}</summary><img src="${esc(s.img)}"></details>`).join('')}
-${x.total>x.mt?`<form data-g="${x.id}" data-m="${x.mcq}" style="display:flex;gap:6px"><input type="number" min="0" max="${x.total-x.mt}" placeholder="درجة المقالي من ${x.total-x.mt}" required><button>حفظ</button></form>`:''}</td></tr>`).join('')}</table></div>`);
-$('#app').onsubmit=async ev2=>{ev2.preventDefault();const f=ev2.target,g=f.dataset.g;if(!g)return;const at1=at.find(x=>x.id==g),v=Math.max(0,Math.min(+f.querySelector('input').value,at1.total-at1.mt));await updateDoc(doc(db,'attempts',g),{score:at1.mcq+v});toast('تم حفظ الدرجة');route()}};
+<form data-g="${x.id}" style="display:flex;flex-direction:column;gap:4px">${x.total>x.mt?`<input name="g" type="number" min="0" max="${x.total-x.mt}" placeholder="درجة المقالي من ${x.total-x.mt}" value="${x.graded?x.score-x.mcq:''}">`:''}<input name="fb" maxlength="500" placeholder="💬 نصيحة أو ملاحظة للطالب" value="${esc(x.feedback||'')}"><button>حفظ</button></form></td></tr>`).join('')||'<tr><td colspan="7">لا توجد تسليمات بعد</td></tr>'}</table></div>
+<div class="card"><h3>⏱ متوسط الوقت لكل سؤال</h3><small>السؤال الأبطأ غالباً هو الأصعب</small>${st.map((x,i)=>`<div style="margin:8px 0"><div>سؤال ${i+1}: ${esc(x.q.q.slice(0,60))}${x.ok!=null?` — <span class="tag">صحيح ${x.ok}%</span>`:''}${i==hard&&x.avg>0?' 🔥 <b class="bad">الأكثر استغراقاً</b>':''}</div>
+<div style="background:var(--b);border-radius:8px;overflow:hidden"><div style="width:${Math.max(6,100*x.avg/mx)}%;background:${i==hard&&x.avg>0?'#dc2626':'var(--p)'};color:#fff;padding:2px 8px">${x.avg?mm(x.avg):'—'}</div></div></div>`).join('')}</div>`);
+const cs=v=>{v=String(v??'');if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
+$('#xl').onclick=()=>{const H=['الطالب','درجة الاختيار من متعدد','الدرجة النهائية','من','النسبة %','مرات الخروج','غشاش','ملاحظة المدرس'],
+L=[H,...at.map(x=>[x.sname,x.mcq,x.score,x.total,pc(x),x.leaves,x.leaves>3?'نعم':'لا',x.feedback||''])].map(r=>r.map(cs).join(',')).join('\r\n');
+const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L],{type:'text/csv;charset=utf-8'}));a.download=(e.title||'grades').replace(/[\\/:*?"<>|]/g,'_')+'.csv';a.click()};
+$('#app').onsubmit=async ev2=>{ev2.preventDefault();const f=ev2.target,g=f.dataset.g;if(!g)return;const a1=at.find(x=>x.id==g),u={feedback:f.fb.value.trim().slice(0,500)};
+if(f.g&&f.g.value!==''){u.score=a1.mcq+Math.max(0,Math.min(+f.g.value,a1.total-a1.mt));u.graded=true}
+await updateDoc(doc(db,'attempts',g),u);toast('تم الحفظ');route()}};
 
 const feed=(kind,title,form,item,make)=>async()=>{if(!need('teacher','student'))return;const T=U.role=='teacher',rs=(T?await get(kind,'tid',U.id):await get(kind,'grade',U.grade)).sort((a,b)=>kind=='sched'?(DAYS.indexOf(a.day)-DAYS.indexOf(b.day)||a.tm.localeCompare(b.tm)):b.ts-a.ts);
 view(`<h2>${title}</h2>${T?`<form id="f" class="card">${form}<button>نشر</button></form>`:''}${rs.map(r=>`<div class="card">${item(r)}${T?`<button class="r" data-del="${r.id}">حذف</button>`:''}</div>`).join('')||'<div class="card">لا يوجد</div>'}`);
@@ -99,7 +118,7 @@ R.student=async()=>{if(!need('student'))return;const [ex,my]=await Promise.all([
 const l=[],hid=[];ex.filter(e=>e.end>=lnow()).forEach(e=>{if(e.grp&&norm(e.grp)!=norm(U.grp))hid.push([e,`مخصص لمجموعة «${e.grp}» ومجموعتك «${U.grp||'غير محددة'}»`]);else if((e.only||[]).length&&!e.only.includes(U.username))hid.push([e,'مخصص لطلاب محددين']);else l.push(e)});l.sort((a,b)=>a.start.localeCompare(b.start));
 view(`<a class="btn" href="#/notes">📚 المذكرات</a> <a class="btn" href="#/posts">🎬 الدروس</a> <a class="btn" href="#/schedule">🗓 الجدول</a><h2>الامتحانات المتاحة</h2>
 ${l.map(e=>{const a=done[e.id];return `<div class="card"><b>${esc(e.title)}</b> — ${esc(e.subject)}<br>👨‍🏫 ${esc(e.tname)} · ⏱ ${e.minutes} د · ${esc(e.start.replace('T',' '))} ← ${esc(e.end.replace('T',' '))}<br>
-${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}`:`<span class="tag">${e.start>lnow()?'⏳ لم يبدأ بعد':'🟢 متاح الآن'}</span> <a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً</div>'}${hid.map(([e,w])=>`<div class="card" style="opacity:.75">🔒 ${esc(e.title)} — ${esc(w)}</div>`).join('')}`)};
+${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}${a.total>a.mt&&!a.graded?'<br><small>⏳ المقالي قيد التصحيح</small>':''}${a.feedback?`<div class="card" style="background:var(--bg);margin:8px 0 0">💬 <b>ملاحظة الأستاذ ${esc(a.tname)}:</b> ${esc(a.feedback)}</div>`:''}`:`<span class="tag">${e.start>lnow()?'⏳ لم يبدأ بعد':'🟢 متاح الآن'}</span> <a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً</div>'}${hid.map(([e,w])=>`<div class="card" style="opacity:.75">🔒 ${esc(e.title)} — ${esc(w)}</div>`).join('')}`)};
 R.exam=async id=>{if(!need('student'))return;const s=await getDoc(doc(db,'exams',id));if(!s.exists())return view('<div class="card">غير موجود</div>');const e=s.data(),d=await getDoc(doc(db,'attempts',id+'_'+U.id)),n=lnow(),ok=e.start<=n&&n<=e.end&&!d.exists();
 view(`<div class="card"><h2>${esc(e.title)}</h2><p>👨‍🏫 ${esc(e.tname)} · 📚 ${esc(e.subject)} · ⏱ ${e.minutes} دقيقة</p><p>${esc(e.descr)}</p><p class="bad">تنبيه: الخروج من صفحة الامتحان أكثر من 3 مرات يُسجَّل كغش.</p>
 ${ok?`<a class="btn" href="#/take/${id}">▶ ابدأ الامتحان</a>`:'غير متاح الآن'} <a class="btn" href="#/student">رجوع</a></div>`)};
@@ -107,11 +126,11 @@ R.take=async id=>{if(!need('student'))return;const s=await getDoc(doc(db,'exams'
 view(`<div id="tm"></div><form id="f" class="noc">${e.qs.map((q,k)=>`<div class="card qq" style="display:none"><b>سؤال ${k+1} من ${e.qs.length}: ${esc(q.q)}</b>${q.img?`<p><img src="${esc(q.img)}"></p>`:''}
 ${q.t=='mcq'?q.o.map((o,j)=>`<label style="display:block;padding:6px"><input type="radio" name="a${k}" value="${j}"> ${esc(o)}</label>`).join(''):`<p>📷 صوّر ورقة إجابتك وارفعها:</p><input type="file" id="p${k}" accept="image/*" capture="environment">`}</div>`).join('')}
 <button type="button" id="pv">⬅ السابق</button> <button type="button" id="nx">التالي ➡</button> <button id="sb" style="display:none">✅ تسليم الامتحان</button></form>`);
-const qq=$$('.qq');let c=0,t=e.minutes*60,l=0,sent=false;const show=()=>{qq.forEach((x,i)=>x.style.display=i==c?'block':'none');$('#pv').style.display=c?'inline-block':'none';$('#nx').style.display=c<qq.length-1?'inline-block':'none';$('#sb').style.display=c==qq.length-1?'inline-block':'none'};
-$('#pv').onclick=()=>{c--;show()};$('#nx').onclick=()=>{c++;show()};show();
-const send=async()=>{if(sent)return;sent=true;clearInterval(window.tm);let m=0,mt=0,ne=0;
-e.qs.forEach((q,k)=>{if(q.t=='mcq'){mt++;const r=document.querySelector(`input[name=a${k}]:checked`);if(r&&+r.value==e.a[k])m++}else ne++});
-try{await setDoc(doc(db,'attempts',id+'_'+U.id),{eid:id,sid:U.id,sname:U.name,tid:e.tid,tname:e.tname,etitle:e.title,esub:e.subject,mcq:m,mt,score:m,total:mt+10*ne,leaves:l,ts:now()});
+const qq=$$('.qq');let c=0,t=e.minutes*60,l=0,sent=false;const times=e.qs.map(()=>0);let last=Date.now();const tick=()=>{times[c]+=Math.round((Date.now()-last)/1000);last=Date.now()};const show=()=>{qq.forEach((x,i)=>x.style.display=i==c?'block':'none');$('#pv').style.display=c?'inline-block':'none';$('#nx').style.display=c<qq.length-1?'inline-block':'none';$('#sb').style.display=c==qq.length-1?'inline-block':'none'};
+$('#pv').onclick=()=>{tick();c--;show()};$('#nx').onclick=()=>{tick();c++;show()};show();
+const send=async()=>{if(sent)return;sent=true;clearInterval(window.tm);tick();let m=0,mt=0,ne=0;const ans=[];
+e.qs.forEach((q,k)=>{if(q.t=='mcq'){mt++;const r=document.querySelector(`input[name=a${k}]:checked`);ans.push(r?+r.value:-1);if(r&&+r.value==e.a[k])m++}else{ne++;ans.push(-2)}});
+try{await setDoc(doc(db,'attempts',id+'_'+U.id),{eid:id,sid:U.id,sname:U.name,tid:e.tid,tname:e.tname,etitle:e.title,esub:e.subject,mcq:m,mt,score:m,total:mt+10*ne,leaves:l,ts:now(),times,ans});
 for(let k=0;k<e.qs.length;k++)if(e.qs[k].t=='essay'){const img=await shrink($('#p'+k).files[0]);if(img)await setDoc(doc(db,'essays',id+'_'+U.id+'_'+k),{eid:id,aid:id+'_'+U.id,sid:U.id,tid:e.tid,qi:k,img})}
 toast(`تم التسليم. اختيار من متعدد: ${m}/${mt}${ne?' — المقالي يصححه المدرس':''}`);location.hash='#/student'}catch(x){sent=false;toast('تعذر التسليم: '+x.message)}};
 $('#f').onsubmit=ev2=>{ev2.preventDefault();send()};
