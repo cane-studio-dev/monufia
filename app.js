@@ -96,10 +96,10 @@ R.schedule=feed('sched','🗓 جدول الحصص',`<select name="day">${opt(DAY
 
 const passed=a=>a.total>0&&a.score*100>=a.total*85&&a.leaves<=3;
 R.student=async()=>{if(!need('student'))return;const [ex,my]=await Promise.all([get('exams','grade',U.grade),get('attempts','sid',U.id)]),done={};my.forEach(a=>done[a.eid]=a);
-const l=ex.filter(e=>e.end>=lnow()&&(!e.grp||norm(e.grp)==norm(U.grp))&&(!(e.only||[]).length||e.only.includes(U.username))).sort((a,b)=>a.start.localeCompare(b.start));
+const l=[],hid=[];ex.filter(e=>e.end>=lnow()).forEach(e=>{if(e.grp&&norm(e.grp)!=norm(U.grp))hid.push([e,`مخصص لمجموعة «${e.grp}» ومجموعتك «${U.grp||'غير محددة'}»`]);else if((e.only||[]).length&&!e.only.includes(U.username))hid.push([e,'مخصص لطلاب محددين']);else l.push(e)});l.sort((a,b)=>a.start.localeCompare(b.start));
 view(`<a class="btn" href="#/notes">📚 المذكرات</a> <a class="btn" href="#/posts">🎬 الدروس</a> <a class="btn" href="#/schedule">🗓 الجدول</a><h2>الامتحانات المتاحة</h2>
 ${l.map(e=>{const a=done[e.id];return `<div class="card"><b>${esc(e.title)}</b> — ${esc(e.subject)}<br>👨‍🏫 ${esc(e.tname)} · ⏱ ${e.minutes} د · ${esc(e.start.replace('T',' '))} ← ${esc(e.end.replace('T',' '))}<br>
-${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}`:`<a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً</div>'}`)};
+${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}`:`<span class="tag">${e.start>lnow()?'⏳ لم يبدأ بعد':'🟢 متاح الآن'}</span> <a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً</div>'}${hid.map(([e,w])=>`<div class="card" style="opacity:.75">🔒 ${esc(e.title)} — ${esc(w)}</div>`).join('')}`)};
 R.exam=async id=>{if(!need('student'))return;const s=await getDoc(doc(db,'exams',id));if(!s.exists())return view('<div class="card">غير موجود</div>');const e=s.data(),d=await getDoc(doc(db,'attempts',id+'_'+U.id)),n=lnow(),ok=e.start<=n&&n<=e.end&&!d.exists();
 view(`<div class="card"><h2>${esc(e.title)}</h2><p>👨‍🏫 ${esc(e.tname)} · 📚 ${esc(e.subject)} · ⏱ ${e.minutes} دقيقة</p><p>${esc(e.descr)}</p><p class="bad">تنبيه: الخروج من صفحة الامتحان أكثر من 3 مرات يُسجَّل كغش.</p>
 ${ok?`<a class="btn" href="#/take/${id}">▶ ابدأ الامتحان</a>`:'غير متاح الآن'} <a class="btn" href="#/student">رجوع</a></div>`)};
