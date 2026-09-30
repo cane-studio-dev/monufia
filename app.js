@@ -20,7 +20,7 @@ const view=h=>{$('#app').innerHTML=h};
 let U=null,ev=null;
 const loadU=async()=>{const u=auth.currentUser;U=null;if(u){const s=await getDoc(doc(db,'users',u.uid));if(s.exists()){U={id:u.uid,...s.data()};if(U.banned){await signOut(auth);U=null;toast('الحساب محظور')}}}};
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;const b=$('#ins');if(b)b.hidden=false});
-function nav(){const l=U?(U.role==='admin'?'<a href="#/admin">لوحة الإدارة</a>':'<a href="#/dash">لوحتي</a><a href="#/notes">المذكرات</a><a href="#/posts">الدروس</a><a href="#/schedule">الجدول</a><a href="#/chat">الدعم</a>')+'<a href="#/board">الصدارة</a><a href="#" id="lo">خروج</a>':'<a href="#/login">دخول</a><a href="#/register">تسجيل</a>';
+function nav(){$('#ft').innerHTML=U?'':'<footer class="card">🎁 أول أسبوع مجاني للمدرسين، ثم 75 ج للشهر الأول و150 ج شهرياً — الدفع بالتحويل من لوحة المدرس بعد التسجيل.</footer>';const l=U?(U.role==='admin'?'<a href="#/admin">لوحة الإدارة</a>':'<a href="#/dash">لوحتي</a><a href="#/notes">المذكرات</a><a href="#/posts">الدروس</a><a href="#/schedule">الجدول</a><a href="#/chat">الدعم</a>')+'<a href="#/board">الصدارة</a><a href="#" id="lo">خروج</a>':'<a href="#/login">دخول</a><a href="#/register">تسجيل</a>';
 $('#nav').innerHTML=`<a href="#/" class="logo"><img src="icon.svg" width="34" alt=""> مدرسين المنوفية المعتمدين</a><span>${l}<button id="dm">🌓</button> <button id="ins" ${ev?'':'hidden'}>📲 تثبيت</button></span>`;
 $('#dm').onclick=()=>{const d=document.documentElement;d.dataset.t=d.dataset.t=='dark'?'':'dark';localStorage.d=d.dataset.t=='dark'?'1':'0'};
 $('#ins').onclick=()=>{ev&&ev.prompt();$('#ins').hidden=true};const lo=$('#lo');if(lo)lo.onclick=async e=>{e.preventDefault();await signOut(auth);location.hash='#/'}}
@@ -32,7 +32,7 @@ addEventListener('hashchange',route);
 onAuthStateChanged(auth,async()=>{await loadU();nav();route()});
 
 R.home=async()=>{const n=(await all('news').catch(()=>[])).sort((a,b)=>b.ts-a.ts).slice(0,5);
-view(`<div class="card hero"><img src="icon.svg" width="90" alt=""><h1 style="margin:8px">مدرسين المنوفية المعتمدين</h1><p>امتحانات • مذكرات • دروس فيديو • جدول حصص • شهادات تقدير</p>${U?'<a class="btn" href="#/dash">لوحتي</a>':'<a class="btn" href="#/register">ابدأ الآن</a> <a class="btn" href="#/login">تسجيل الدخول</a>'}</div>
+view(`<div class="card hero"><img src="icon.svg" width="90" alt=""><h1 style="margin:8px">مدرسين المنوفية المعتمدين</h1><p>امتحانات • مذكرات • دروس فيديو • جدول حصص • شهادات تقدير</p>${!U||U.role=='teacher'?'<p><b>🎁 أول أسبوع مجاني للمدرسين</b></p>':''}${U?'<a class="btn" href="#/dash">لوحتي</a>':'<a class="btn" href="#/register">ابدأ الآن</a> <a class="btn" href="#/login">تسجيل الدخول</a>'}</div>
 <div class="demo"><div class="sc s1"><div class="cap">١ • وضع الامتحان: اختيار الإجابة الصحيحة</div><div class="qz">ما ناتج ٣ × ٤ ؟</div><div class="op"><span>٧</span></div><div class="op ok1"><span>١٢</span><em>✓ الإجابة الصحيحة</em></div><div class="op"><span>٩</span></div></div>
 <div class="sc s2"><div class="cap">٢ • الطالب يؤدي الامتحان والنظام يراقب الخروج</div><div class="tmr">⏱ ١٢:٤١</div><div class="exl">🚪 خرج من صفحة الامتحان</div><div class="lvw"><b class="l1">1 / 3</b><b class="l2">2 / 3</b><b class="l3">3 / 3</b></div><div class="cheat">⚠ غشاش</div></div>
 <div class="sc s3"><div class="cap">٣ • تصحيح المقالي بالكاميرا وظهور الدرجة</div><div class="ph">📷 ورقة الإجابة<i class="flash"></i></div><div class="upl">✓ تم رفع الإجابة</div><div class="gr">٩ / ١٠</div><div class="fbk">💬 أحسنت يا بطل، كمّل! 👏</div></div>
@@ -40,7 +40,7 @@ view(`<div class="card hero"><img src="icon.svg" width="90" alt=""><h1 style="ma
 ${n.map(x=>`<div class="card">📢 ${esc(x.body)}<br><small>${new Date(x.ts).toLocaleString('ar-EG')}</small></div>`).join('')}`)};
 R.dash=()=>{if(!U)return location.hash='#/login';location.hash='#/'+({admin:'admin',teacher:'teacher',student:'student'}[U.role])};
 
-function authForm(reg){view(`<form id="f" class="card"><h2>${reg?'تسجيل حساب جديد':'تسجيل الدخول'}</h2>
+function authForm(reg){view(`<form id="f" class="card"><h2>${reg?'تسجيل حساب جديد':'تسجيل الدخول'}</h2>${reg?'<p><span class="tag">🎁 المدرسون: أول أسبوع مجاني</span></p>':''}
 ${reg?`<label>الاسم الثلاثي (عربي أو إنجليزي)</label><input name="name" required><label>نوع الحساب</label><select name="role"><option value="student">طالب</option><option value="teacher">مدرس</option></select>
 <div id="g"><label>الصف الدراسي</label><select name="grade">${opt(GR)}</select><label>المجموعة (اختياري)</label><input name="grp" placeholder="مثال: مجموعة أ"></div>`:''}
 <label>اسم المستخدم</label><input name="username" required><label>كلمة المرور</label><input name="pw" type="password" required><button>${reg?'تسجيل':'دخول'}</button></form>`);
@@ -49,7 +49,7 @@ $('#f').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),un=
 try{if(!reg){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}
 const name=String(f.get('name')).trim().split(/\s+/).join(' ');if(!isAd&&name.split(' ').length<3)return toast('الاسم الثلاثي مطلوب');
 let c;try{c=await createUserWithEmailAndPassword(auth,mail(un),pw)}catch(x){if(isAd&&x.code=='auth/email-already-in-use'){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}throw x}
-const role=isAd?'admin':f.get('role');await setDoc(doc(db,'users',c.user.uid),{name:isAd?'Marwan Dev':name,username:un,role,grade:role=='student'?f.get('grade'):'',grp:(f.get('grp')||'').trim(),activeUntil:0,banned:false,paidOnce:false});
+const role=isAd?'admin':f.get('role');await setDoc(doc(db,'users',c.user.uid),{name:isAd?'Marwan Dev':name,username:un,role,grade:role=='student'?f.get('grade'):'',grp:(f.get('grp')||'').trim(),activeUntil:role=='teacher'?now()+7*864e5:0,banned:false,paidOnce:false});
 await loadU();nav();location.hash='#/dash';route()}
 catch(x){toast({'auth/email-already-in-use':'اسم المستخدم مستخدم بالفعل','auth/weak-password':'كلمة المرور 6 أحرف على الأقل','auth/invalid-credential':'بيانات غير صحيحة','auth/invalid-api-key':'مفتاح Firebase غير صحيح'}[x.code]||x.message)}}}
 R.login=()=>authForm(false);R.register=()=>authForm(true);
@@ -58,7 +58,7 @@ const rowHtml=t=>`<div class="card qrow" data-t="${t}"><b>${t=='mcq'?'اختيا
 <textarea class="q" placeholder="نص السؤال"></textarea><label>صورة السؤال (اختياري)</label><input type="file" class="im" accept="image/*">
 ${t=='mcq'?`<input class="o" placeholder="الخيار 1"><input class="o" placeholder="الخيار 2"><input class="o" placeholder="الخيار 3"><input class="o" placeholder="الخيار 4"><select class="a"><option value="0">الإجابة الصحيحة: 1</option><option value="1">الإجابة الصحيحة: 2</option><option value="2">الإجابة الصحيحة: 3</option><option value="3">الإجابة الصحيحة: 4</option></select>`:''}</div>`;
 R.teacher=async()=>{if(!need('teacher'))return;const act=U.activeUntil>now(),rc=await get('receipts','uid',U.id),pend=rc.some(r=>r.status=='pending'),ex=(await get('exams','tid',U.id)).sort((a,b)=>b.createdAt-a.createdAt);
-view(`<div class="card"><h3>الاشتراك</h3>${act?`<span class="ok">✅ فعّال حتى ${new Date(U.activeUntil).toLocaleDateString('ar-EG')}</span>`:pend?'⏳ إيصالك قيد المراجعة':'⛔ غير فعّال'}
+view(`<div class="card"><h3>الاشتراك</h3>${act?`<span class="ok">✅ ${U.paidOnce?'فعّال':'🎁 تجربة مجانية'} حتى ${new Date(U.activeUntil).toLocaleDateString('ar-EG')}</span>`:pend?'⏳ إيصالك قيد المراجعة':(U.paidOnce?'⛔ انتهى اشتراكك':'⛔ انتهت التجربة المجانية — اشترك للاستمرار')}
 <form id="pay"><p>المطلوب الآن: <b>${U.paidOnce?150:75} ج</b> على 01101687866</p><input type="file" name="r" accept="image/*" required><button>لقد قمت بتحويل الأموال</button></form></div>
 <form id="ex" class="card"><h3>إنشاء امتحان</h3><input name="title" placeholder="عنوان الامتحان" required><input name="subject" placeholder="المادة" required><select name="grade">${opt(GR)}</select><input name="grp" placeholder="(اختياري) مجموعة محددة داخل الصف">
 <input name="minutes" type="number" min="1" placeholder="المدة بالدقائق" required>البدء <input name="start" type="datetime-local" required>الانتهاء <input name="end" type="datetime-local" required>
