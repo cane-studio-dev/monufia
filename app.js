@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,updateDoc,deleteDoc,addDoc,collection,query,where,getDocs} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,updateDoc,deleteDoc,addDoc,collection,query,where,getDocs,getCountFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {firebaseConfig} from "./config.js";
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -49,7 +49,7 @@ $('#f').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),un=
 try{if(!reg){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}
 const name=String(f.get('name')).trim().split(/\s+/).join(' ');if(!isAd&&name.split(' ').length<3)return toast('الاسم الثلاثي مطلوب');
 let c;try{c=await createUserWithEmailAndPassword(auth,mail(un),pw)}catch(x){if(isAd&&x.code=='auth/email-already-in-use'){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}throw x}
-const role=isAd?'admin':f.get('role');await setDoc(doc(db,'users',c.user.uid),{name:isAd?'Marwan Dev':name,username:un,role,grade:role=='student'?f.get('grade'):'',grp:(f.get('grp')||'').trim(),activeUntil:role=='teacher'?now()+7*864e5:0,banned:false,paidOnce:false});
+const role=isAd?'admin':f.get('role');await setDoc(doc(db,'users',c.user.uid),{name:isAd?'Marwan Dev':name,username:un,role,grade:role=='student'?f.get('grade'):'',grp:(f.get('grp')||'').trim(),activeUntil:role=='teacher'?now()+7*864e5:0,banned:false,paidOnce:false,createdAt:now()});
 await loadU();nav();location.hash='#/dash';route()}
 catch(x){toast({'auth/email-already-in-use':'اسم المستخدم مستخدم بالفعل','auth/weak-password':'كلمة المرور 6 أحرف على الأقل','auth/invalid-credential':'بيانات غير صحيحة','auth/invalid-api-key':'مفتاح Firebase غير صحيح'}[x.code]||x.message)}}}
 R.login=()=>authForm(false);R.register=()=>authForm(true);
@@ -59,7 +59,7 @@ const rowHtml=t=>`<div class="card qrow" data-t="${t}"><b>${t=='mcq'?'اختيا
 ${t=='mcq'?`<input class="o" placeholder="الخيار 1"><input class="o" placeholder="الخيار 2"><input class="o" placeholder="الخيار 3"><input class="o" placeholder="الخيار 4"><select class="a"><option value="0">الإجابة الصحيحة: 1</option><option value="1">الإجابة الصحيحة: 2</option><option value="2">الإجابة الصحيحة: 3</option><option value="3">الإجابة الصحيحة: 4</option></select>`:''}</div>`;
 R.teacher=async()=>{if(!need('teacher'))return;const act=U.activeUntil>now(),rc=await get('receipts','uid',U.id),pend=rc.some(r=>r.status=='pending'),ex=(await get('exams','tid',U.id)).sort((a,b)=>b.createdAt-a.createdAt);
 view(`<div class="card"><h3>الاشتراك</h3>${act?`<span class="ok">✅ ${U.paidOnce?'فعّال':'🎁 تجربة مجانية'} حتى ${new Date(U.activeUntil).toLocaleDateString('ar-EG')}</span>`:pend?'⏳ إيصالك قيد المراجعة':(U.paidOnce?'⛔ انتهى اشتراكك':'⛔ انتهت التجربة المجانية — اشترك للاستمرار')}
-<form id="pay"><p>المطلوب الآن: <b>${U.paidOnce?150:75} ج</b> على 01101687866</p><input type="file" name="r" accept="image/*" required><button>لقد قمت بتحويل الأموال</button></form></div>
+<form id="pay"><p>المطلوب الآن: <b id="amt">${U.paidOnce?150:75}</b> ج على 01101687866</p><div style="display:flex;gap:6px"><input id="cd" placeholder="كود خصم (اختياري)" style="margin:0"><button type="button" id="ap">تطبيق</button></div><small id="cm"></small><input type="file" name="r" accept="image/*" required><button>لقد قمت بتحويل الأموال</button></form></div>
 <form id="ex" class="card"><h3>إنشاء امتحان</h3><input name="title" placeholder="عنوان الامتحان" required><input name="subject" placeholder="المادة" required><select name="grade">${opt(GR)}</select><input name="grp" placeholder="(اختياري) مجموعة محددة داخل الصف">
 <input name="minutes" type="number" min="1" placeholder="المدة بالدقائق" required>البدء <input name="start" type="datetime-local" required>الانتهاء <input name="end" type="datetime-local" required>
 <textarea name="descr" placeholder="شرح وتعليمات الامتحان"></textarea><input name="only" placeholder="(اختياري) طلاب محددون: أسماء مستخدمين بفاصلة"><div id="rows">${rowHtml('mcq')}</div>
@@ -67,7 +67,11 @@ view(`<div class="card"><h3>الاشتراك</h3>${act?`<span class="ok">✅ ${U
 <div class="card"><a class="btn" href="#/posts">🎬 دروسي وبوستاتي</a> <a class="btn" href="#/schedule">🗓 جدول الحصص</a> <a class="btn" href="#/notes">📚 مذكراتي</a></div>
 <div class="card"><h3>امتحاناتي</h3>${ex.map(e=>`<p><a href="#/results/${e.id}">${esc(e.title)}</a> — ${esc(e.subject)} (${esc(e.grade)}) <button class="r" data-del="${e.id}">حذف</button></p>`).join('')||'لا توجد امتحانات'}</div>`);
 $('#am').onclick=()=>$('#rows').insertAdjacentHTML('beforeend',rowHtml('mcq'));$('#ae').onclick=()=>$('#rows').insertAdjacentHTML('beforeend',rowHtml('essay'));
-$('#pay').onsubmit=async e=>{e.preventDefault();const img=await shrink(e.target.r.files[0],1000);await addDoc(collection(db,'receipts'),{uid:U.id,name:U.name,img,ts:now(),status:'pending'});toast('تم استلام الإيصال، وسيتم التفعيل بعد مراجعته');route()};
+let appl=null;const base=U.paidOnce?150:75;
+$('#ap').onclick=async()=>{const c=$('#cd').value.trim().toUpperCase().replace(/\s+/g,'');appl=null;$('#amt').textContent=base;$('#cm').textContent='';if(!c)return;
+try{const d=await getDoc(doc(db,'codes',c)),v=d.exists()?d.data():null;if(!v||!v.active||(v.max>0&&v.used>=v.max)){$('#cm').textContent='❌ الكود غير صالح أو منتهي';return}
+appl={id:c,pct:v.pct};$('#amt').textContent=Math.round(base*(100-v.pct)/100);$('#cm').textContent='✅ تم تطبيق خصم '+v.pct+'%'}catch(x){$('#cm').textContent='❌ تعذر التحقق من الكود'}};
+$('#pay').onsubmit=async e=>{e.preventDefault();const img=await shrink(e.target.r.files[0],1000);await addDoc(collection(db,'receipts'),{uid:U.id,name:U.name,img,ts:now(),status:'pending',code:appl?appl.id:'',amount:+$('#amt').textContent});toast('تم استلام الإيصال، وسيتم التفعيل بعد مراجعته');route()};
 $('#app').onclick=async e=>{const d=e.target.dataset.del;if(d&&confirm('حذف الامتحان؟')){await deleteDoc(doc(db,'exams',d));route()}};
 $('#ex').onsubmit=async e=>{e.preventDefault();if(!act)return toast('فعّل اشتراكك أولاً');const f=e.target,qs=[],a=[];
 for(const r of $$('.qrow')){const t=r.dataset.t,q=r.querySelector('.q').value.trim();if(!q)continue;const img=await shrink(r.querySelector('.im').files[0]);let o=[],k=0;
@@ -79,8 +83,8 @@ toast('تم نشر الامتحان');route()}};
 R.results=async id=>{if(!need('teacher'))return;const ds=await getDoc(doc(db,'exams',id));if(!ds.exists()||ds.data().tid!=U.id)return view('<div class="card">غير موجود</div>');
 const e=ds.data(),at=(await get('attempts','eid',id)).filter(x=>x.tid==U.id).sort((a,b)=>b.score-a.score),es=rows(await getDocs(query(collection(db,'essays'),where('tid','==',U.id),where('eid','==',id))));
 const mm=s=>Math.floor(s/60)+':'+String(Math.round(s%60)).padStart(2,'0'),pc=x=>x.total?Math.round(100*x.score/x.total):0;
-const st=e.qs.map((q,k)=>{const tt=at.filter(x=>x.times&&x.times[k]!=null),avg=tt.length?tt.reduce((s,x)=>s+x.times[k],0)/tt.length:0;let ok=null;
-if(q.t=='mcq'){const aa=at.filter(x=>x.ans&&x.ans[k]!=null&&x.ans[k]!=-2);ok=aa.length?Math.round(100*aa.filter(x=>x.ans[k]==e.a[k]).length/aa.length):null}return{q,avg,ok}}),
+const st=e.qs.map((q,k)=>{const tt=at.filter(x=>x.times&&x.times[k]!=null),avg=tt.length?tt.reduce((s,x)=>s+x.times[k],0)/tt.length:0;let ok=null,dist=[],n=0;
+if(q.t=='mcq'){const aa=at.filter(x=>x.ans&&x.ans[k]!=null&&x.ans[k]!=-2);ok=aa.length?Math.round(100*aa.filter(x=>x.ans[k]==e.a[k]).length/aa.length):null;dist=[0,1,2,3].map(j=>aa.filter(x=>x.ans[k]==j).length);n=aa.length}return{q,avg,ok,dist,n}}),
 mx=Math.max(1,...st.map(x=>x.avg)),hard=st.reduce((b,x,i)=>x.avg>st[b].avg?i:b,0);
 view(`<div class="card"><h3>${esc(e.title)}</h3><p class="po">${esc(e.subject)} — ${esc(e.grade)} — المدرس: ${esc(U.name)} — ${new Date().toLocaleDateString('ar-EG')}</p>
 <div class="noprint"><button id="xl">📥 تصدير Excel</button> <button onclick="print()">🖨 طباعة / PDF</button></div>
@@ -88,7 +92,7 @@ view(`<div class="card"><h3>${esc(e.title)}</h3><p class="po">${esc(e.subject)} 
 ${at.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.sname)} ${x.leaves>3?'<span class="bad">⚠ غشاش</span>':''}</td><td>${x.score}/${x.total}</td><td>${pc(x)}%</td><td>${x.leaves}</td><td>${esc(x.feedback||'')}</td><td class="noprint">
 ${es.filter(s=>s.aid==x.id).sort((a,b)=>a.qi-b.qi).map(s=>`<details><summary>📷 سؤال ${s.qi+1}</summary><img src="${esc(s.img)}"></details>`).join('')}
 <form data-g="${x.id}" style="display:flex;flex-direction:column;gap:4px">${x.total>x.mt?`<input name="g" type="number" min="0" max="${x.total-x.mt}" placeholder="درجة المقالي من ${x.total-x.mt}" value="${x.graded?x.score-x.mcq:''}">`:''}<input name="fb" maxlength="500" placeholder="💬 نصيحة أو ملاحظة للطالب" value="${esc(x.feedback||'')}"><button>حفظ</button></form></td></tr>`).join('')||'<tr><td colspan="7">لا توجد تسليمات بعد</td></tr>'}</table></div>
-<div class="card"><h3>⏱ متوسط الوقت لكل سؤال</h3><small>السؤال الأبطأ غالباً هو الأصعب</small>${st.map((x,i)=>`<div style="margin:8px 0"><div>سؤال ${i+1}: ${esc(x.q.q.slice(0,60))}${x.ok!=null?` — <span class="tag">صحيح ${x.ok}%</span>`:''}${i==hard&&x.avg>0?' 🔥 <b class="bad">الأكثر استغراقاً</b>':''}</div>
+<div class="card"><h3>⏱ متوسط الوقت لكل سؤال</h3><small>السؤال الأبطأ غالباً هو الأصعب</small>${st.map((x,i)=>`<div style="margin:8px 0"><div>سؤال ${i+1}: ${esc(x.q.q.slice(0,60))}${x.ok!=null?` — <span class="tag">صحيح ${x.ok}%</span>`:''}${i==hard&&x.avg>0?' 🔥 <b class="bad">الأكثر استغراقاً</b>':''}</div>${x.ok!=null&&x.n>=3&&x.ok<30?`<div class="bad">⚠ يحتاج مراجعة: ${x.ok}% فقط أجابوا صح وأكثر خيار اختاره الطلاب هو (${x.dist.indexOf(Math.max(...x.dist))+1})${x.dist.indexOf(Math.max(...x.dist))!=e.a[i]?' — تأكد أن مفتاح الإجابة صحيح':''}</div>`:''}
 <div style="background:var(--b);border-radius:8px;overflow:hidden"><div style="width:${Math.max(6,100*x.avg/mx)}%;background:${i==hard&&x.avg>0?'#dc2626':'var(--p)'};color:#fff;padding:2px 8px">${x.avg?mm(x.avg):'—'}</div></div></div>`).join('')}</div>`);
 const cs=v=>{v=String(v??'');if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
 $('#xl').onclick=()=>{const H=['الطالب','درجة الاختيار من متعدد','الدرجة النهائية','من','النسبة %','مرات الخروج','غشاش','ملاحظة المدرس'],
@@ -150,15 +154,30 @@ const load=async()=>{const m=(await get('msgs','thread',th)).sort((a,b)=>a.ts-b.
 view(`<div class="card"><h3>💬 الدعم الفني / Marwan Dev</h3><div id="ms"></div><form id="f"><input name="b" placeholder="اكتب رسالتك" required autocomplete="off"><button>إرسال</button></form></div>`);await load();window.tm=setInterval(load,6000);
 $('#f').onsubmit=async e=>{e.preventDefault();const b=e.target.b.value.trim().slice(0,1000);if(!b)return;await addDoc(collection(db,'msgs'),{thread:th,from:U.id,fromName:U.name,body:b,ts:now()});e.target.reset();load()}};
 
-R.admin=async()=>{if(!need('admin'))return;const [rc,us,nw]=await Promise.all([all('receipts'),all('users'),all('news')]);rc.sort((a,b)=>(b.status=='pending')-(a.status=='pending')||b.ts-a.ts);
-view(`<form id="nf" class="card"><h3>📢 إعلان عام</h3><textarea name="b" required></textarea><button>نشر</button></form>${nw.map(n=>`<div class="card">${esc(n.body)} <button class="r" data-a="dn" data-id="${n.id}">حذف</button></div>`).join('')}
-<div class="card"><h3>🧾 الإيصالات</h3>${rc.map(r=>`<div><b>${esc(r.name)}</b> — ${new Date(r.ts).toLocaleString('ar-EG')} — ${r.status=='pending'?'<span class="bad">بانتظار المراجعة</span>':r.status=='ok'?'<span class="ok">مقبول</span>':'مرفوض'}<br><img src="${esc(r.img)}" style="max-width:260px;border-radius:10px">
+R.admin=async()=>{if(!need('admin'))return;const [rc,us,nw,cd,ce,ca]=await Promise.all([all('receipts'),all('users'),all('news'),all('codes'),getCountFromServer(collection(db,'exams')),getCountFromServer(collection(db,'attempts'))]);
+rc.sort((a,b)=>(b.status=='pending')-(a.status=='pending')||b.ts-a.ts);cd.sort((a,b)=>a.id.localeCompare(b.id));
+const n=now(),d=t=>new Date(t).toLocaleDateString('ar-EG'),T=us.filter(u=>u.role=='teacher'),S=us.filter(u=>u.role=='student'),act=T.filter(u=>u.activeUntil>n),trial=act.filter(u=>!u.paidOnce),paid=act.filter(u=>u.paidOnce),
+soon=act.filter(u=>u.activeUntil<n+7*864e5).sort((a,b)=>a.activeUntil-b.activeUntil),wk=us.filter(u=>u.createdAt>n-7*864e5).length,seen={};
+const mo=new Date();mo.setDate(1);mo.setHours(0,0,0,0);let rev=0,mrev=0;
+rc.filter(r=>r.status=='ok').sort((a,b)=>a.ts-b.ts).forEach(r=>{const v=r.amount!=null?r.amount:(seen[r.uid]?150:75);seen[r.uid]=1;rev+=v;if(r.ts>=mo.getTime())mrev+=v});
+const box=[['👨‍🏫 المدرسين',T.length],['✅ اشتراك فعّال',act.length],['🎁 في التجربة',trial.length],['💳 مدفوع',paid.length],['🎓 الطلاب',S.length],['🆕 تسجيلات 7 أيام',wk],['📝 الامتحانات',ce.data().count],['✍ التسليمات',ca.data().count],['🧾 إيصالات معلقة',rc.filter(r=>r.status=='pending').length],['💰 إيرادات تقديرية',rev+' ج'],['📅 هذا الشهر',mrev+' ج']];
+view(`<h2>📊 لوحة الإحصائيات</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px">${box.map(([a,b])=>`<div class="card" style="text-align:center;margin:0"><div style="font-size:26px;font-weight:800;color:var(--p)">${b}</div>${a}</div>`).join('')}</div>
+<small>الإيرادات تقديرية من الإيصالات المقبولة (حسب المبلغ المفروض على المدرس بعد الخصم).</small>
+<div class="card"><h3>⏰ اشتراكات تنتهي خلال 7 أيام</h3>${soon.map(u=>`<p>${esc(u.name)} — ${u.paidOnce?'مدفوع':'تجربة'} — ينتهي ${d(u.activeUntil)} <a class="btn" href="#/chat/${u.id}">💬 تواصل</a></p>`).join('')||'لا يوجد'}</div>
+<form id="cf" class="card"><h3>🏷 أكواد الخصم</h3><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px"><input name="c" placeholder="الكود مثل MENOUFIA50" required><input name="p" type="number" min="1" max="100" placeholder="نسبة الخصم %" required><input name="m" type="number" min="0" placeholder="أقصى عدد استخدام (0 = بلا حد)" required></div><button>إضافة كود</button>
+<table>${cd.map(c=>`<tr><td><b>${esc(c.id)}</b></td><td>${c.pct}%</td><td>${c.used||0}/${c.max||'∞'}</td><td>${c.active?'🟢 فعّال':'⚫ موقوف'}</td><td><button type="button" data-a="ct" data-id="${c.id}">تفعيل/إيقاف</button> <button type="button" class="r" data-a="cx" data-id="${c.id}">حذف</button></td></tr>`).join('')}</table></form>
+<form id="nf" class="card"><h3>📢 إعلان عام</h3><textarea name="b" required></textarea><button>نشر</button></form>${nw.map(x=>`<div class="card">${esc(x.body)} <button class="r" data-a="dn" data-id="${x.id}">حذف</button></div>`).join('')}
+<div class="card"><h3>🧾 الإيصالات</h3>${rc.map(r=>`<div><b>${esc(r.name)}</b> — ${new Date(r.ts).toLocaleString('ar-EG')} — ${r.status=='pending'?'<span class="bad">بانتظار المراجعة</span>':r.status=='ok'?'<span class="ok">مقبول</span>':'مرفوض'}${r.amount!=null?` — المبلغ المفروض <b>${r.amount} ج</b>`:''}${r.code?` — كود <b>${esc(r.code)}</b>`:''}<br><img src="${esc(r.img)}" style="max-width:260px;border-radius:10px">
 ${r.status=='pending'?`<div><button class="g" data-a="ok" data-id="${r.id}" data-u="${r.uid}">✅ قبول وتفعيل شهر</button> <button class="r" data-a="no" data-id="${r.id}">❌ رفض</button></div>`:''}</div><hr>`).join('')||'لا توجد إيصالات'}</div>
-<div class="card"><h3>👥 المستخدمون</h3><table>${us.filter(u=>u.role!='admin').map(u=>`<tr><td>${esc(u.name)}<br><small>${esc(u.username)} · ${u.role=='teacher'?'مدرس · '+(u.activeUntil>now()?'✅ فعّال':'⛔ غير فعّال'):'طالب · '+esc(u.grade)}</small></td><td>${u.banned?'⛔ محظور':''}</td>
+<div class="card"><h3>👥 المستخدمون</h3><table>${us.filter(u=>u.role!='admin').map(u=>`<tr><td>${esc(u.name)}<br><small>${esc(u.username)} · ${u.role=='teacher'?'مدرس · '+(u.activeUntil>n?'✅ فعّال':'⛔ غير فعّال'):'طالب · '+esc(u.grade)}</small></td><td>${u.banned?'⛔ محظور':''}</td>
 <td><a class="btn" href="#/chat/${u.id}">💬 رد</a> <button class="r" data-a="ban" data-id="${u.id}" data-b="${u.banned?1:''}">حظر/فك</button> <button class="r" data-a="del" data-id="${u.id}">حذف</button></td></tr>`).join('')}</table></div>`);
 $('#nf').onsubmit=async e=>{e.preventDefault();await addDoc(collection(db,'news'),{body:e.target.b.value.trim(),ts:now()});route()};
+$('#cf').onsubmit=async e=>{e.preventDefault();const f=e.target,id=f.c.value.trim().toUpperCase().replace(/\s+/g,'');if(!id||id.includes('/'))return toast('كود غير صالح');
+await setDoc(doc(db,'codes',id),{pct:Math.min(100,Math.max(1,+f.p.value)),max:Math.max(0,+f.m.value),used:0,active:true});toast('تم إضافة الكود');route()};
 $('#app').onclick=async e=>{const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a,id=b.dataset.id;
-if(a=='ok'){const u=us.find(x=>x.id==b.dataset.u);await updateDoc(doc(db,'receipts',id),{status:'ok'});await updateDoc(doc(db,'users',u.id),{activeUntil:Math.max(now(),u.activeUntil||0)+30*864e5,paidOnce:true})}
+if(a=='ok'){const u=us.find(x=>x.id==b.dataset.u),r=rc.find(x=>x.id==id);await updateDoc(doc(db,'receipts',id),{status:'ok'});await updateDoc(doc(db,'users',u.id),{activeUntil:Math.max(now(),u.activeUntil||0)+30*864e5,paidOnce:true});
+const c=r&&r.code?cd.find(x=>x.id==r.code):null;if(c)await updateDoc(doc(db,'codes',c.id),{used:(c.used||0)+1})}
 else if(a=='no')await updateDoc(doc(db,'receipts',id),{status:'no'});else if(a=='ban')await updateDoc(doc(db,'users',id),{banned:!b.dataset.b});
-else if(a=='del'){if(!confirm('حذف نهائي؟'))return;await deleteDoc(doc(db,'users',id))}else if(a=='dn')await deleteDoc(doc(db,'news',id));route()}};
+else if(a=='del'){if(!confirm('حذف نهائي؟'))return;await deleteDoc(doc(db,'users',id))}else if(a=='dn')await deleteDoc(doc(db,'news',id));
+else if(a=='ct'){const c=cd.find(x=>x.id==id);await updateDoc(doc(db,'codes',id),{active:!c.active})}else if(a=='cx'){if(!confirm('حذف الكود؟'))return;await deleteDoc(doc(db,'codes',id))}route()}};
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
