@@ -11,6 +11,7 @@ const DAYS=['السبت','الأحد','الاثنين','الثلاثاء','ال�
 const opt=a=>a.map(x=>`<option>${x}</option>`).join(''),now=()=>Date.now();
 const lnow=()=>{const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)};
 const toast=m=>{const d=document.createElement('div');d.className='fl';d.textContent=m;document.body.prepend(d);setTimeout(()=>d.remove(),4000)};
+addEventListener('unhandledrejection',e=>toast('حدث خطأ: '+((e.reason&&e.reason.message)||e.reason)));
 const rows=s=>s.docs.map(d=>({id:d.id,...d.data()}));
 const get=async(c,f,v)=>rows(await getDocs(query(collection(db,c),where(f,'==',v))));
 const all=async c=>rows(await getDocs(collection(db,c)));
@@ -42,13 +43,13 @@ R.dash=()=>{if(!U)return location.hash='#/login';location.hash='#/'+({admin:'adm
 
 function authForm(reg){view(`<form id="f" class="card"><h2>${reg?'تسجيل حساب جديد':'تسجيل الدخول'}</h2>${reg?'<p><span class="tag">🎁 المدرسون: أول أسبوع مجاني</span></p>':''}
 ${reg?`<label>الاسم الثلاثي (عربي أو إنجليزي)</label><input name="name" required><label>نوع الحساب</label><select name="role"><option value="student">طالب</option><option value="teacher">مدرس</option></select>
-<div id="g"><label>الصف الدراسي</label><select name="grade">${opt(GR)}</select><label>المجموعة (اختياري)</label><input name="grp" placeholder="مثال: مجموعة أ"></div>`:''}
+<div id="g"><label>الصف الدراسي</label><select name="grade"><option value="">اختر صفك...</option>${opt(GR)}</select><label>المجموعة (اختياري)</label><input name="grp" placeholder="مثال: مجموعة أ"></div>`:''}
 <label>اسم المستخدم</label><input name="username" required><label>كلمة المرور</label><input name="pw" type="password" required><button>${reg?'تسجيل':'دخول'}</button></form>`);
 if(reg)$('[name=role]').onchange=e=>$('#g').style.display=e.target.value=='student'?'block':'none';
 $('#f').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),un=norm(f.get('username')),pw=f.get('pw'),isAd=un===ADMIN;
 try{if(!reg){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}
 const name=String(f.get('name')).trim().split(/\s+/).join(' ');if(!isAd&&name.split(' ').length<3)return toast('الاسم الثلاثي مطلوب');
-let c;try{c=await createUserWithEmailAndPassword(auth,mail(un),pw)}catch(x){if(isAd&&x.code=='auth/email-already-in-use'){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}throw x}
+if(!isAd&&f.get('role')=='student'&&!f.get('grade'))return toast('اختر صفك الدراسي');let c;try{c=await createUserWithEmailAndPassword(auth,mail(un),pw)}catch(x){if(isAd&&x.code=='auth/email-already-in-use'){await signInWithEmailAndPassword(auth,mail(un),pw);location.hash='#/dash';return}throw x}
 const role=isAd?'admin':f.get('role');await setDoc(doc(db,'users',c.user.uid),{name:isAd?'Marwan Dev':name,username:un,role,grade:role=='student'?f.get('grade'):'',grp:(f.get('grp')||'').trim(),activeUntil:role=='teacher'?now()+7*864e5:0,banned:false,paidOnce:false,createdAt:now()});
 await loadU();nav();location.hash='#/dash';route()}
 catch(x){toast({'auth/email-already-in-use':'اسم المستخدم مستخدم بالفعل','auth/weak-password':'كلمة المرور 6 أحرف على الأقل','auth/invalid-credential':'بيانات غير صحيحة','auth/invalid-api-key':'مفتاح Firebase غير صحيح'}[x.code]||x.message)}}}
@@ -60,12 +61,12 @@ ${t=='mcq'?`<input class="o" placeholder="الخيار 1"><input class="o" place
 R.teacher=async()=>{if(!need('teacher'))return;const act=U.activeUntil>now(),rc=await get('receipts','uid',U.id),pend=rc.some(r=>r.status=='pending'),ex=(await get('exams','tid',U.id)).sort((a,b)=>b.createdAt-a.createdAt);
 view(`<div class="card"><h3>الاشتراك</h3>${act?`<span class="ok">✅ ${U.paidOnce?'فعّال':'🎁 تجربة مجانية'} حتى ${new Date(U.activeUntil).toLocaleDateString('ar-EG')}</span>`:pend?'⏳ إيصالك قيد المراجعة':(U.paidOnce?'⛔ انتهى اشتراكك':'⛔ انتهت التجربة المجانية — اشترك للاستمرار')}
 <form id="pay"><p>المطلوب الآن: <b id="amt">${U.paidOnce?150:75}</b> ج على 01101687866</p><div style="display:flex;gap:6px"><input id="cd" placeholder="كود خصم (اختياري)" style="margin:0"><button type="button" id="ap">تطبيق</button></div><small id="cm"></small><input type="file" name="r" accept="image/*" required><button>لقد قمت بتحويل الأموال</button></form></div>
-<form id="ex" class="card"><h3>إنشاء امتحان</h3><input name="title" placeholder="عنوان الامتحان" required><input name="subject" placeholder="المادة" required><select name="grade">${opt(GR)}</select><input name="grp" placeholder="(اختياري) مجموعة محددة داخل الصف">
+<form id="ex" class="card"><h3>إنشاء امتحان</h3><input name="title" placeholder="عنوان الامتحان" required><input name="subject" placeholder="المادة" required><select name="grade" required><option value="">اختر الصف...</option>${opt(GR)}</select><input name="grp" placeholder="(اختياري) مجموعة محددة داخل الصف">
 <input name="minutes" type="number" min="1" placeholder="المدة بالدقائق" required>البدء <input name="start" type="datetime-local" required>الانتهاء <input name="end" type="datetime-local" required>
 <textarea name="descr" placeholder="شرح وتعليمات الامتحان"></textarea><input name="only" placeholder="(اختياري) طلاب محددون: أسماء مستخدمين بفاصلة"><div id="rows">${rowHtml('mcq')}</div>
 <button type="button" id="am">➕ اختيار من متعدد</button> <button type="button" id="ae">➕ سؤال مقالي</button> <button>✅ نشر الامتحان</button></form>
 <div class="card"><a class="btn" href="#/posts">🎬 دروسي وبوستاتي</a> <a class="btn" href="#/schedule">🗓 جدول الحصص</a> <a class="btn" href="#/notes">📚 مذكراتي</a></div>
-<div class="card"><h3>امتحاناتي</h3>${ex.map(e=>`<p><a href="#/results/${e.id}">${esc(e.title)}</a> — ${esc(e.subject)} (${esc(e.grade)}) <button class="r" data-del="${e.id}">حذف</button></p>`).join('')||'لا توجد امتحانات'}</div>`);
+<div class="card"><h3>امتحاناتي</h3>${ex.map(e=>`<p><a href="#/results/${e.id}">${esc(e.title)}</a> — ${esc(e.subject)} <span class="tag">${esc(e.grade)}</span>${e.grp?` <span class="tag">مجموعة ${esc(e.grp)}</span>`:''}<br><small>${esc(e.start.replace('T',' '))} ← ${esc(e.end.replace('T',' '))}</small> <button class="r" data-del="${e.id}">حذف</button></p>`).join('')||'لا توجد امتحانات'}</div>`);
 $('#am').onclick=()=>$('#rows').insertAdjacentHTML('beforeend',rowHtml('mcq'));$('#ae').onclick=()=>$('#rows').insertAdjacentHTML('beforeend',rowHtml('essay'));
 let appl=null;const base=U.paidOnce?150:75;
 $('#ap').onclick=async()=>{const c=$('#cd').value.trim().toUpperCase().replace(/\s+/g,'');appl=null;$('#amt').textContent=base;$('#cm').textContent='';if(!c)return;
@@ -77,8 +78,7 @@ $('#ex').onsubmit=async e=>{e.preventDefault();if(!act)return toast('فعّل ا
 for(const r of $$('.qrow')){const t=r.dataset.t,q=r.querySelector('.q').value.trim();if(!q)continue;const img=await shrink(r.querySelector('.im').files[0]);let o=[],k=0;
 if(t=='mcq'){o=[...r.querySelectorAll('.o')].map(x=>x.value.trim());if(o.some(x=>!x))return toast('أكمل الخيارات الأربعة لكل سؤال');k=+r.querySelector('.a').value}qs.push({t,q,img,o});a.push(k)}
 if(!qs.length)return toast('أضف سؤالاً واحداً على الأقل');if(JSON.stringify(qs).length>900000)return toast('الصور كبيرة، قلل عددها');
-await addDoc(collection(db,'exams'),{tid:U.id,tname:U.name,title:f.title.value,subject:f.subject.value,grade:f.grade.value,grp:f.grp.value.trim(),minutes:+f.minutes.value,start:f.start.value,end:f.end.value,descr:f.descr.value,only:f.only.value.split(',').map(norm).filter(Boolean),qs,a,createdAt:now()});
-toast('تم نشر الامتحان');route()}};
+try{await addDoc(collection(db,'exams'),{tid:U.id,tname:U.name,title:f.title.value,subject:f.subject.value,grade:f.grade.value,grp:f.grp.value.trim(),minutes:+f.minutes.value,start:f.start.value,end:f.end.value,descr:f.descr.value,only:f.only.value.split(',').map(norm).filter(Boolean),qs,a,createdAt:now()});toast('تم نشر الامتحان ✅ ويظهر لطلاب: '+f.grade.value);route()}catch(x){toast('تعذر نشر الامتحان: '+x.message)}}};
 
 R.results=async id=>{if(!need('teacher'))return;const ds=await getDoc(doc(db,'exams',id));if(!ds.exists()||ds.data().tid!=U.id)return view('<div class="card">غير موجود</div>');
 const e=ds.data(),at=(await get('attempts','eid',id)).filter(x=>x.tid==U.id).sort((a,b)=>b.score-a.score),es=rows(await getDocs(query(collection(db,'essays'),where('tid','==',U.id),where('eid','==',id))));
@@ -103,10 +103,10 @@ if(f.g&&f.g.value!==''){u.score=a1.mcq+Math.max(0,Math.min(+f.g.value,a1.total-a
 await updateDoc(doc(db,'attempts',g),u);toast('تم الحفظ');route()}};
 
 const feed=(kind,title,form,item,make)=>async()=>{if(!need('teacher','student'))return;const T=U.role=='teacher',rs=(T?await get(kind,'tid',U.id):await get(kind,'grade',U.grade)).sort((a,b)=>kind=='sched'?(DAYS.indexOf(a.day)-DAYS.indexOf(b.day)||a.tm.localeCompare(b.tm)):b.ts-a.ts);
-view(`<h2>${title}</h2>${T?`<form id="f" class="card">${form}<button>نشر</button></form>`:''}${rs.map(r=>`<div class="card">${item(r)}${T?`<button class="r" data-del="${r.id}">حذف</button>`:''}</div>`).join('')||'<div class="card">لا يوجد</div>'}`);
+view(`<h2>${title}</h2>${T?`<form id="f" class="card">${form}<button>نشر</button></form>`:''}${rs.map(r=>`<div class="card">${item(r)}${T?`<button class="r" data-del="${r.id}">حذف</button>`:''}</div>`).join('')||'<div class="card">لا يوجد'+(T?'':'<br><small>المعروض هو ما نشره المدرسون لصفك: '+esc(U.grade)+'</small>')+'</div>'}`);
 if(T){$('#f').onsubmit=async e=>{e.preventDefault();if(U.activeUntil<=now())return toast('فعّل اشتراكك أولاً');await addDoc(collection(db,kind),{tid:U.id,tname:U.name,ts:now(),...make(e.target)});toast('تم');route()};
 $('#app').onclick=async e=>{const d=e.target.dataset.del;if(d&&confirm('حذف؟')){await deleteDoc(doc(db,kind,d));route()}}}};
-const gsel=`<select name="grade">${opt(GR)}</select>`;
+const gsel=`<select name="grade" required><option value="">اختر الصف...</option>${opt(GR)}</select>`;
 R.notes=feed('notes','📚 المذكرات والملفات',`<input name="title" placeholder="عنوان المذكرة" required>${gsel}<textarea name="descr" placeholder="وصف المذكرة"></textarea><input name="link" type="url" placeholder="رابط الملف (Google Drive أو غيره)" required>`,
  r=>`<b>${esc(r.title)}</b> <span class="tag">${esc(r.grade)}</span><br>👨‍🏫 ${esc(r.tname)} · ${new Date(r.ts).toLocaleDateString('ar-EG')}<p>${esc(r.descr)}</p><a class="btn" target="_blank" rel="noopener" href="${esc(r.link)}">⬇ فتح / تحميل</a>`,
  f=>({title:f.title.value,grade:f.grade.value,descr:f.descr.value,link:f.link.value}));
@@ -120,9 +120,10 @@ R.schedule=feed('sched','🗓 جدول الحصص',`<select name="day">${opt(DAY
 const passed=a=>a.total>0&&a.score*100>=a.total*85&&a.leaves<=3;
 R.student=async()=>{if(!need('student'))return;const [ex,my]=await Promise.all([get('exams','grade',U.grade),get('attempts','sid',U.id)]),done={};my.forEach(a=>done[a.eid]=a);
 const l=[],hid=[];ex.filter(e=>e.end>=lnow()).forEach(e=>{if(e.grp&&norm(e.grp)!=norm(U.grp))hid.push([e,`مخصص لمجموعة «${e.grp}» ومجموعتك «${U.grp||'غير محددة'}»`]);else if((e.only||[]).length&&!e.only.includes(U.username))hid.push([e,'مخصص لطلاب محددين']);else l.push(e)});l.sort((a,b)=>a.start.localeCompare(b.start));
-view(`<a class="btn" href="#/notes">📚 المذكرات</a> <a class="btn" href="#/posts">🎬 الدروس</a> <a class="btn" href="#/schedule">🗓 الجدول</a><h2>الامتحانات المتاحة</h2>
+view(`<a class="btn" href="#/notes">📚 المذكرات</a> <a class="btn" href="#/posts">🎬 الدروس</a> <a class="btn" href="#/schedule">🗓 الجدول</a><h2>الامتحانات المتاحة</h2><p><span class="tag">صفك: ${esc(U.grade)}</span>${U.grp?` <span class="tag">مجموعتك: ${esc(U.grp)}</span>`:''}</p><details class="card"><summary>✏ تعديل صفي / مجموعتي</summary><form id="gf"><select name="grade">${GR.map(x=>`<option ${x==U.grade?'selected':''}>${x}</option>`).join('')}</select><input name="grp" placeholder="المجموعة (اختياري)" value="${esc(U.grp)}"><button>حفظ</button></form></details>
 ${l.map(e=>{const a=done[e.id];return `<div class="card"><b>${esc(e.title)}</b> — ${esc(e.subject)}<br>👨‍🏫 ${esc(e.tname)} · ⏱ ${e.minutes} د · ${esc(e.start.replace('T',' '))} ← ${esc(e.end.replace('T',' '))}<br>
-${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}${a.total>a.mt&&!a.graded?'<br><small>⏳ المقالي قيد التصحيح</small>':''}${a.feedback?`<div class="card" style="background:var(--bg);margin:8px 0 0">💬 <b>ملاحظة الأستاذ ${esc(a.tname)}:</b> ${esc(a.feedback)}</div>`:''}`:`<span class="tag">${e.start>lnow()?'⏳ لم يبدأ بعد':'🟢 متاح الآن'}</span> <a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً</div>'}${hid.map(([e,w])=>`<div class="card" style="opacity:.75">🔒 ${esc(e.title)} — ${esc(w)}</div>`).join('')}`)};
+${a?`✅ درجتك ${a.score}/${a.total} ${passed(a)?`<a class="btn" href="#/cert/${a.id}">🎓 شهادتي</a>`:''}${a.total>a.mt&&!a.graded?'<br><small>⏳ المقالي قيد التصحيح</small>':''}${a.feedback?`<div class="card" style="background:var(--bg);margin:8px 0 0">💬 <b>ملاحظة الأستاذ ${esc(a.tname)}:</b> ${esc(a.feedback)}</div>`:''}`:`<span class="tag">${e.start>lnow()?'⏳ لم يبدأ بعد':'🟢 متاح الآن'}</span> <a class="btn" href="#/exam/${e.id}">التفاصيل</a>`}</div>`}).join('')||'<div class="card">لا توجد امتحانات لصفك حالياً.<br><small>لو مدرسك نشر امتحان ومش ظاهر، اطلب منه يتأكد إنه اختار صفك: '+esc(U.grade)+'</small></div>'}${hid.map(([e,w])=>`<div class="card" style="opacity:.75">🔒 ${esc(e.title)} — ${esc(w)}</div>`).join('')}`);
+$('#gf').onsubmit=async e=>{e.preventDefault();await updateDoc(doc(db,'users',U.id),{grade:e.target.grade.value,grp:e.target.grp.value.trim()});await loadU();toast('تم الحفظ');route()}};
 R.exam=async id=>{if(!need('student'))return;const s=await getDoc(doc(db,'exams',id));if(!s.exists())return view('<div class="card">غير موجود</div>');const e=s.data(),d=await getDoc(doc(db,'attempts',id+'_'+U.id)),n=lnow(),ok=e.start<=n&&n<=e.end&&!d.exists();
 view(`<div class="card"><h2>${esc(e.title)}</h2><p>👨‍🏫 ${esc(e.tname)} · 📚 ${esc(e.subject)} · ⏱ ${e.minutes} دقيقة</p><p>${esc(e.descr)}</p><p class="bad">تنبيه: الخروج من صفحة الامتحان أكثر من 3 مرات يُسجَّل كغش.</p>
 ${ok?`<a class="btn" href="#/take/${id}">▶ ابدأ الامتحان</a>`:'غير متاح الآن'} <a class="btn" href="#/student">رجوع</a></div>`)};
