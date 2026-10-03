@@ -24,7 +24,7 @@ const b=el.querySelector('b'),from=Number(b.dataset.v||0),to=VC.total,t0=perform
 const step=t=>{const k=Math.min(1,(t-t0)/dur);b.textContent=Math.round(from+(to-from)*(1-Math.pow(1-k,3))).toLocaleString('ar-EG');if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step);
 if(from&&from!==to){el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}}
 (async()=>{try{const d=new Date(),k=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'),tot=doc(db,'stats','total'),day=doc(db,'stats','d'+k);
-if(localStorage.vday!==k){let bad=false;for(const r of [tot,day]){try{await updateDoc(r,{n:increment(1)})}catch(e){if(e.code=='not-found'){try{await setDoc(r,{n:1})}catch(_){bad=true}}else bad=true}}if(!bad)localStorage.vday=k}
+if(localStorage.vday!==k){let bad=false;for(const r of [tot,day]){try{const x=await getDoc(r);if(x.exists())await updateDoc(r,{n:increment(1)});else await setDoc(r,{n:1})}catch(e){bad=true}}if(!bad)localStorage.vday=k}
 const cur={total:0,today:0},up=()=>{VC={...cur};paintVC()};
 onSnapshot(tot,s=>{cur.total=s.exists()?s.data().n:0;up()},()=>{});onSnapshot(day,s=>{cur.today=s.exists()?s.data().n:0;up()},()=>{})}catch(e){}})();
 const loadU=async()=>{const u=auth.currentUser;U=null;if(u){const s=await getDoc(doc(db,'users',u.uid));if(s.exists()){U={id:u.uid,...s.data()};if(U.banned){await signOut(auth);U=null;toast('الحساب محظور')}}}};
