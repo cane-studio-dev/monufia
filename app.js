@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {getFirestore,doc,getDoc,setDoc,updateDoc,deleteDoc,addDoc,collection,query,where,getDocs,getCountFromServer} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {getFirestore,doc,getDoc,setDoc,updateDoc,deleteDoc,addDoc,collection,query,where,getDocs,getCountFromServer,onSnapshot,increment} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {firebaseConfig} from "./config.js";
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -18,13 +18,21 @@ const all=async c=>rows(await getDocs(collection(db,c)));
 const shrink=(file,w=900,q=.6)=>new Promise(r=>{if(!file)return r('');const i=new Image,fr=new FileReader;fr.onload=()=>{i.onload=()=>{const k=Math.min(1,w/i.width),c=document.createElement('canvas');c.width=i.width*k;c.height=i.height*k;c.getContext('2d').drawImage(i,0,0,c.width,c.height);r(c.toDataURL('image/jpeg',q))};i.src=fr.result};fr.readAsDataURL(file)});
 const yt=u=>(String(u).match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/)||[])[1]||'';
 const view=h=>{$('#app').innerHTML=h};
-let U=null,ev=null;
+let U=null,ev=null,VC=null;
+function paintVC(){const el=$('#vc');if(!el||!VC)return;el.hidden=false;el.title='زيارات اليوم: '+VC.today.toLocaleString('ar-EG')+' — الإجمالي: '+VC.total.toLocaleString('ar-EG');
+const b=el.querySelector('b'),from=Number(b.dataset.v||0),to=VC.total,t0=performance.now(),dur=from?500:1400;b.dataset.v=to;
+const step=t=>{const k=Math.min(1,(t-t0)/dur);b.textContent=Math.round(from+(to-from)*(1-Math.pow(1-k,3))).toLocaleString('ar-EG');if(k<1)requestAnimationFrame(step)};requestAnimationFrame(step);
+if(from&&from!==to){el.classList.remove('tick');void el.offsetWidth;el.classList.add('tick')}}
+(async()=>{try{const d=new Date(),k=d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'),tot=doc(db,'stats','total'),day=doc(db,'stats','d'+k);
+if(localStorage.vday!==k){let bad=false;for(const r of [tot,day]){try{await updateDoc(r,{n:increment(1)})}catch(e){if(e.code=='not-found'){try{await setDoc(r,{n:1})}catch(_){bad=true}}else bad=true}}if(!bad)localStorage.vday=k}
+const cur={total:0,today:0},up=()=>{VC={...cur};paintVC()};
+onSnapshot(tot,s=>{cur.total=s.exists()?s.data().n:0;up()},()=>{});onSnapshot(day,s=>{cur.today=s.exists()?s.data().n:0;up()},()=>{})}catch(e){}})();
 const loadU=async()=>{const u=auth.currentUser;U=null;if(u){const s=await getDoc(doc(db,'users',u.uid));if(s.exists()){U={id:u.uid,...s.data()};if(U.banned){await signOut(auth);U=null;toast('الحساب محظور')}}}};
 addEventListener('beforeinstallprompt',e=>{e.preventDefault();ev=e;const b=$('#ins');if(b)b.hidden=false});
 function nav(){$('#ft').innerHTML=U?'':'<footer class="card">🎁 أول أسبوع مجاني للمدرسين، ثم 75 ج للشهر الأول و150 ج شهرياً — الدفع بالتحويل من لوحة المدرس بعد التسجيل.</footer>';const l=U?(U.role==='admin'?'<a href="#/admin">لوحة الإدارة</a>':'<a href="#/dash">لوحتي</a><a href="#/notes">المذكرات</a><a href="#/posts">الدروس</a><a href="#/schedule">الجدول</a><a href="#/chat">الدعم</a>')+'<a href="#/board">الصدارة</a><a href="#" id="lo">خروج</a>':'<a href="#/login">دخول</a><a href="#/register">تسجيل</a>';
-$('#nav').innerHTML=`<a href="#/" class="logo"><img src="icon.svg" width="34" alt=""> مدرسين المنوفية المعتمدين</a><span>${l}<button id="dm">🌓</button> <button id="ins" ${ev?'':'hidden'}>📲 تثبيت</button></span>`;
+$('#nav').innerHTML=`<span class="brand"><a href="#/" class="logo"><img src="icon.svg" width="34" alt=""> مدرسين المنوفية المعتمدين</a><span id="vc" class="vc" hidden><i></i><b>0</b><small>زائر</small></span></span><span>${l}<button id="dm">🌓</button> <button id="ins" ${ev?'':'hidden'}>📲 تثبيت</button></span>`;
 $('#dm').onclick=()=>{const d=document.documentElement;d.dataset.t=d.dataset.t=='dark'?'':'dark';localStorage.d=d.dataset.t=='dark'?'1':'0'};
-$('#ins').onclick=()=>{ev&&ev.prompt();$('#ins').hidden=true};const lo=$('#lo');if(lo)lo.onclick=async e=>{e.preventDefault();await signOut(auth);location.hash='#/'}}
+$('#ins').onclick=()=>{ev&&ev.prompt();$('#ins').hidden=true};const lo=$('#lo');if(lo)lo.onclick=async e=>{e.preventDefault();await signOut(auth);location.hash='#/'};paintVC()}
 const need=(...r)=>{if(!U){location.hash='#/login';return false}if(r.length&&!r.includes(U.role)){view('<div class="card">الصفحة غير موجودة</div>');return false}return true};
 const R={};
 async function route(){clearInterval(window.tm);document.onvisibilitychange=document.oncopy=document.oncut=document.onpaste=document.oncontextmenu=document.onselectstart=null;$('#app').onclick=null;
