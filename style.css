@@ -79,3 +79,28 @@ footer.card{font-size:13px}
 @media(max-width:600px){nav{margin:6px;padding:8px 12px}.brand{gap:6px}}
 @media(prefers-reduced-motion:reduce){body::before,body::after,.hero img,.vc i{animation:none}}
 @media print{body::before,body::after{display:none}body{background:#fff}.card,nav{backdrop-filter:none;box-shadow:none;background:#fff}}
+
+/* ===== v3: no horizontal scroll, 4 comfort themes, groups ===== */
+html,body{max-width:100%;overflow-x:hidden}@supports(overflow:clip){html,body{overflow-x:clip}}
+main,.card,nav{max-width:100%;min-width:0}.card{overflow-wrap:anywhere}img,iframe,video,canvas{max-width:100%;height:auto}iframe{height:auto}
+table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}.row input{flex:1;margin:0;min-width:120px}.row .btn,.row button{margin:0}
+.gh{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}#gm{max-height:55vh;overflow-y:auto;padding:4px;margin-bottom:10px}
+@media(max-width:600px){main{padding:0 10px}.hero{padding:36px 12px}td,th{padding:7px 5px;font-size:13px}.demo{height:300px}}
+/* dark = luxury navy + gold */
+[data-t=dark]{--bg:#06080f;--c:rgba(18,24,48,.62);--t:#f2efe6;--p:#d6b36a;--p2:#f0d28a;--b:rgba(214,179,106,.2);--gb:rgba(214,179,106,.22);--glass:rgba(12,17,36,.7);--inp:rgba(255,255,255,.06);--sh:0 10px 40px rgba(0,0,0,.55)}
+[data-t=dark] button,[data-t=dark] .btn{color:#1a1405;box-shadow:0 6px 20px rgba(214,179,106,.28)}[data-t=dark] button.r{color:#fff}[data-t=dark] button.g{color:#04130a}[data-t=dark] .me{color:#1a1405}
+[data-t=dark] body::before{background:#1b2a6b}[data-t=dark] body::after{background:#7a5a1e}
+[data-t=dark] .hero{background:linear-gradient(135deg,rgba(30,40,85,.92),rgba(12,17,36,.92));border-color:rgba(214,179,106,.5)}[data-t=dark] .hero .btn{background:linear-gradient(135deg,#d6b36a,#f0d28a);color:#1a1405}
+/* warm / beige */
+[data-t=warm]{--bg:#f6efe2;--c:rgba(255,250,240,.72);--t:#3b2f20;--p:#b4742f;--p2:#d9a05b;--b:rgba(120,90,50,.22);--gb:rgba(255,248,235,.9);--glass:rgba(255,248,235,.7);--inp:rgba(255,255,255,.6);--sh:0 10px 36px rgba(120,80,30,.15)}
+[data-t=warm] body::before{background:#e8b377}[data-t=warm] body::after{background:#e2a07a}[data-t=warm] button,[data-t=warm] .btn{box-shadow:0 6px 18px rgba(180,116,47,.3)}
+[data-t=warm] .hero{background:linear-gradient(135deg,rgba(180,116,47,.95),rgba(217,160,91,.9))}[data-t=warm] .hero .btn{color:#8a5316}
+/* high contrast */
+[data-t=contrast]{--bg:#000;--c:#0a0a0a;--t:#fff;--p:#ffd400;--p2:#ffd400;--a:#ffd400;--b:#fff;--gb:#fff;--glass:#000;--inp:#111;--sh:none}
+[data-t=contrast] body::before,[data-t=contrast] body::after{display:none}
+[data-t=contrast] .card,[data-t=contrast] nav,[data-t=contrast] .vc,[data-t=contrast] input,[data-t=contrast] select,[data-t=contrast] textarea{backdrop-filter:none;-webkit-backdrop-filter:none;border:2px solid #fff;box-shadow:none}
+[data-t=contrast] button,[data-t=contrast] .btn{background:#ffd400;color:#000;box-shadow:none;border:2px solid #fff}[data-t=contrast] button.r{background:#ff3b30;color:#fff}[data-t=contrast] button.g{background:#00e676;color:#000}
+[data-t=contrast] a{color:#ffd400}[data-t=contrast] .btn{color:#000}[data-t=contrast] .hero{background:#000;color:#fff;border:2px solid #ffd400}[data-t=contrast] .hero .btn{background:#ffd400;color:#000}
+[data-t=contrast] .me{background:#ffd400;color:#000}[data-t=contrast] .fl,[data-t=contrast] #tm{background:#ffd400;color:#000;box-shadow:none}[data-t=contrast] .bad{color:#ff6b6b}[data-t=contrast] .ok{color:#4cff9a}
+[data-t=contrast] select option{background:#000;color:#fff}
