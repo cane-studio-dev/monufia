@@ -142,7 +142,7 @@ localStorage.removeItem('pend');localStorage.lu=un;await loadU();nav();location.
 catch(x){toast({'auth/email-already-in-use':'اسم المستخدم مستخدم بالفعل','auth/weak-password':'كلمة المرور 6 أحرف على الأقل','auth/invalid-credential':'بيانات غير صحيحة','auth/invalid-api-key':'مفتاح Firebase غير صحيح'}[x.code]||x.message)}}}
 R.login=()=>authForm(false);R.register=()=>authForm(true);
 
-const rowHtml=t=>`<div class="card qrow" data-t="${t}"><b>${t=='mcq'?'اختيار من متعدد':'مقالي (الطالب يصوّر إجابته)'}</b> <button type="button" class="r" onclick="this.parentNode.remove()">🗑 حذف السؤال</button>
+const rowHtml=t=>`<div class="card qrow" data-t="${t}"><b>${t=='mcq'?'اختيار من متعدد':'مقالي (الطالب يكتب أو يصوّر إجابته)'}</b> <button type="button" class="r" onclick="this.parentNode.remove()">🗑 حذف السؤال</button>
 <textarea class="q" placeholder="نص السؤال"></textarea><label>صورة السؤال (اختياري)</label><input type="file" class="im" accept="image/*">
 ${t=='essay'?'<textarea class="ma" placeholder="✨ الإجابة النموذجية (للتصحيح بالذكاء الاصطناعي) — اكتب النقاط المطلوبة بالتفصيل"></textarea>':''}
 ${t=='mcq'?`<input class="o" placeholder="الخيار 1"><input class="o" placeholder="الخيار 2"><input class="o" placeholder="الخيار 3"><input class="o" placeholder="الخيار 4"><select class="a"><option value="0">الإجابة الصحيحة: 1</option><option value="1">الإجابة الصحيحة: 2</option><option value="2">الإجابة الصحيحة: 3</option><option value="3">الإجابة الصحيحة: 4</option></select>`:''}</div>`;
@@ -176,7 +176,7 @@ notify(f.kind.value,f.title.value,f.grade.value);toast('تم النشر ✅ وي
 const GEM_MODEL='gemini-2.5-flash',GEM_URL='https://generativelanguage.googleapis.com/v1beta/models/'+GEM_MODEL+':generateContent';
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function gemPrompt(e,items){return `أنت مصحّح امتحانات خبير ومنصف لمادة «${e.subject}» للصف «${e.grade}».
-مهمتك تصحيح إجابات طالب واحد على أسئلة مقالية. كل إجابة مرفقة كصورة (ورقة الطالب بخط يده) بعد نص السؤال.
+مهمتك تصحيح إجابات طالب واحد على أسئلة مقالية. كل إجابة تأتي كنص مكتوب أو كصورة (ورقة الطالب بخط يده) أو الاثنين معاً.
 
 قواعد صارمة:
 1) قارن إجابة الطالب بـ«الإجابة النموذجية» وأعطِ درجة من 10 لكل سؤال (يجوز نصف درجة مثل 7.5).
@@ -191,9 +191,9 @@ function gemPrompt(e,items){return `أنت مصحّح امتحانات خبير 
 {"results":[{"q":رقم_السؤال,"score":الدرجة_من_10,"feedback":"التعليق"}]}
 
 الأسئلة:
-`+items.map(i=>`— سؤال رقم ${i.n}: ${i.q}\nالإجابة النموذجية: ${i.ma||'(لم يكتبها المدرس، صحّح بحسب المنهج وأفضل فهم)'}\n(صورة إجابة الطالب لهذا السؤال تأتي بعده)`).join('\n\n')}
-async function gemGrade(key,e,items,imgs){const parts=[{text:gemPrompt(e,items)}];
-items.forEach((it,i)=>{const m=/^data:(image\/[\w+.-]+);base64,(.+)$/.exec(imgs[i]||'');parts.push({text:'إجابة الطالب على سؤال رقم '+it.n+':'});if(m)parts.push({inlineData:{mimeType:m[1],data:m[2]}});else parts.push({text:'(لا توجد صورة إجابة)'})});
+`+items.map(i=>`— سؤال رقم ${i.n}: ${i.q}\nالإجابة النموذجية: ${i.ma||'(لم يكتبها المدرس، صحّح بحسب المنهج وأفضل فهم)'}\n(إجابة الطالب لهذا السؤال تأتي بعده)`).join('\n\n')}
+async function gemGrade(key,e,items,imgs,txts){const parts=[{text:gemPrompt(e,items)}];
+items.forEach((it,i)=>{const m=/^data:(image\/[\w+.-]+);base64,(.+)$/.exec(imgs[i]||'');parts.push({text:'إجابة الطالب على سؤال رقم '+it.n+':'});const tx=(txts&&txts[i]||'').trim();if(tx)parts.push({text:'[إجابة مكتوبة] '+tx});if(m)parts.push({inlineData:{mimeType:m[1],data:m[2]}});if(!tx&&!m)parts.push({text:'(لا توجد إجابة)'})});
 const body={contents:[{role:'user',parts}],generationConfig:{temperature:.2,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{results:{type:'ARRAY',items:{type:'OBJECT',properties:{q:{type:'INTEGER'},score:{type:'NUMBER'},feedback:{type:'STRING'}},required:['q','score','feedback']}}},required:['results']}}};
 for(let t=0;t<3;t++){const r=await fetch(GEM_URL,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});
 if(r.status==429){await sleep(20000);continue}
@@ -204,7 +204,7 @@ async function aiGradeAll(e,at,es,say){const key=localStorage.gk||window._sk;if(
 const todo=at.filter(x=>x.total>x.mt&&!x.graded);if(!todo.length)return toast('لا توجد إجابات مقالية تنتظر التصحيح');let done=0,fail=0;
 for(const x of todo){say(`جارٍ التصحيح ${done+fail+1} من ${todo.length}: ${x.sname}`);
 try{const mine=es.filter(s=>s.aid==x.id).sort((a,b)=>a.qi-b.qi),items=mine.map(s=>({n:s.qi+1,q:e.qs[s.qi].q,ma:e.qs[s.qi].ma})),
-res=mine.length?await gemGrade(key,e,items,mine.map(s=>s.img)):[];
+res=mine.length?await gemGrade(key,e,items,mine.map(s=>s.img),mine.map(s=>s.txt)):[];
 let sum=0;const fbs=[];res.forEach(r=>{const sc=Math.max(0,Math.min(10,Math.round((+r.score||0)*2)/2));sum+=sc;fbs.push(`س${r.q}: ${sc}/10 — ${String(r.feedback||'').slice(0,120)}`)});
 const nEs=e.qs.filter(q=>q.t=='essay').length,fb=('🤖 تصحيح ذكي مبدئي — '+fbs.join(' | ')).slice(0,500);
 await updateDoc(doc(db,'attempts',x.id),{score:x.mcq+Math.min(sum,10*nEs),graded:true,feedback:fb,ai:true});done++}
@@ -247,7 +247,7 @@ ${U.role=='teacher'&&e.qs.some(q=>q.t=='essay')?`<div class="card noprint"><h3>�
 ${window._sk?'<small>✅ مفعّل من الإدارة، اضغط وابدأ</small><br>':'<input id="gk" type="password" placeholder="🔑 مفتاح Gemini (مجاني من Google AI Studio)" value="'+esc(localStorage.gk||'')+'">'}<button type="button" id="gkb">✨ تصحيح كل المقالي بالذكاء الاصطناعي</button><div id="gst"></div></div>`:''}
 <table><tr><th>#</th><th>الطالب</th><th>الدرجة</th><th>النسبة</th><th>الخروج</th><th>الوقت</th><th>ملاحظة المدرس</th><th class="noprint">التصحيح</th></tr>
 ${at.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.sname)} ${x.leaves>3?'<span class="bad">⚠ غشاش</span>':''}</td><td>${x.score}/${x.total}</td><td>${pc(x)}%</td><td>${x.leaves}</td><td>${x.dur?mm(x.dur):'—'}</td><td>${esc(x.feedback||'')}</td><td class="noprint">
-${es.filter(s=>s.aid==x.id).sort((a,b)=>a.qi-b.qi).map(s=>`<details><summary>📷 سؤال ${s.qi+1}</summary><img src="${esc(s.img)}"></details>`).join('')}
+${es.filter(s=>s.aid==x.id).sort((a,b)=>a.qi-b.qi).map(s=>`<details><summary>${s.txt?'✍️':'📷'} سؤال ${s.qi+1}</summary>${s.txt?`<p style="white-space:pre-wrap">${esc(s.txt)}</p>`:''}${s.img?`<img src="${esc(s.img)}">`:''}</details>`).join('')}
 <form data-g="${x.id}" style="display:flex;flex-direction:column;gap:4px">${x.total>x.mt?`<input name="g" type="number" min="0" max="${x.total-x.mt}" placeholder="درجة المقالي من ${x.total-x.mt}" value="${x.graded?x.score-x.mcq:''}">`:''}<input name="fb" maxlength="500" placeholder="💬 نصيحة أو ملاحظة للطالب" value="${esc(x.feedback||'')}"><button>حفظ</button></form></td></tr>`).join('')||'<tr><td colspan="8">لا توجد تسليمات بعد</td></tr>'}</table></div>
 <div class="card"><h3>⏱ متوسط الوقت لكل سؤال</h3><small>السؤال الأبطأ غالباً هو الأصعب</small>${st.map((x,i)=>`<div style="margin:8px 0"><div>سؤال ${i+1}: ${esc(x.q.q.slice(0,60))}${x.ok!=null?` — <span class="tag">صحيح ${x.ok}%</span>`:''}${i==hard&&x.avg>0?' 🔥 <b class="bad">الأكثر استغراقاً</b>':''}</div>${x.ok!=null&&x.n>=3&&x.ok<30?`<div class="bad">⚠ يحتاج مراجعة: ${x.ok}% فقط أجابوا صح وأكثر خيار اختاره الطلاب هو (${x.dist.indexOf(Math.max(...x.dist))+1})${x.dist.indexOf(Math.max(...x.dist))!=e.a[i]?' — تأكد أن مفتاح الإجابة صحيح':''}</div>`:''}
 <div style="background:var(--b);border-radius:8px;overflow:hidden"><div style="width:${Math.max(6,100*x.avg/mx)}%;background:${i==hard&&x.avg>0?'#dc2626':'var(--p)'};color:#fff;padding:2px 8px">${x.avg?mm(x.avg):'—'}</div></div></div>`).join('')}</div>`);
@@ -302,7 +302,7 @@ ${ok?`<a class="btn" href="#/take/${id}">▶ ${e.kind=='hw'?'ابدأ الواج
 R.take=async id=>{if(!need('student'))return;const s=await getDoc(doc(db,'exams',id)),d=await getDoc(doc(db,'attempts',id+'_'+U.id));if(!s.exists())return;const e=s.data(),n=lnow();if(d.exists()||n<e.start||n>e.end)return location.hash='#/student';
 const dk='dr_'+U.id+'_'+id;let dr={};try{dr=JSON.parse(localStorage.getItem(dk)||'{}')}catch(x){dr={}}
 view(`<div id="tm"></div><form id="f" class="noc">${e.qs.map((q,k)=>`<div class="card qq" style="display:none"><b>سؤال ${k+1} من ${e.qs.length}: ${esc(q.q)}</b>${q.img?`<p><img src="${esc(q.img)}"></p>`:''}
-${q.t=='mcq'?q.o.map((o,j)=>`<label style="display:block;padding:6px"><input type="radio" name="a${k}" value="${j}"> ${esc(o)}</label>`).join(''):`<p>📷 صوّر ورقة إجابتك وارفعها:</p><input type="file" id="p${k}" accept="image/*" capture="environment">`}</div>`).join('')}
+${q.t=='mcq'?q.o.map((o,j)=>`<label style="display:block;padding:6px"><input type="radio" name="a${k}" value="${j}"> ${esc(o)}</label>`).join(''):`<p>✍️ اكتب إجابتك هنا، أو 📷 صوّر ورقتك وارفعها (أو الاتنين):</p><textarea id="tx${k}" rows="5" maxlength="4000" placeholder="اكتب إجابتك..."></textarea><label>📷 صورة ورقة الإجابة (اختياري)</label><input type="file" id="p${k}" accept="image/*">`}</div>`).join('')}
 <button type="button" id="pv">⬅ السابق</button> <button type="button" id="nx">التالي ➡</button> <button id="sb" style="display:none">✅ تسليم</button></form>`);
 const qq=$$('.qq'),limit=(e.minutes||0)*60,times=(dr.times&&dr.times.length==e.qs.length)?dr.times:e.qs.map(()=>0);let c=Math.min(dr.c||0,qq.length-1),el=dr.el||0,l=dr.l||0,sent=false,last=Date.now();
 const tick=()=>{times[c]+=Math.round((Date.now()-last)/1000);last=Date.now()},getA=()=>{const o={};$$('#f input[type=radio]:checked').forEach(r=>{o[r.name.slice(1)]=r.value});return o},save=()=>{try{localStorage.setItem(dk,JSON.stringify({c,el,l,times,a:getA()}))}catch(x){}};
@@ -313,7 +313,7 @@ const paint=()=>{$('#tm').textContent=(limit?'⏱ المتبقي ':'⏱ مرّ '
 const send=async()=>{if(sent)return;sent=true;clearInterval(window.tm);tick();let m=0,mt=0,ne=0;const ansA=[];
 e.qs.forEach((q,k)=>{if(q.t=='mcq'){mt++;const r=document.querySelector(`input[name=a${k}]:checked`);ansA.push(r?+r.value:-1);if(r&&+r.value==e.a[k])m++}else{ne++;ansA.push(-2)}});
 try{await setDoc(doc(db,'attempts',id+'_'+U.id),{eid:id,sid:U.id,sname:U.name,tid:e.tid,tname:e.tname,etitle:e.title,esub:e.subject,kind:e.kind||'exam',mcq:m,mt,score:m,total:mt+10*ne,leaves:l,ts:now(),times,ans:ansA,dur:el});
-for(let k=0;k<e.qs.length;k++)if(e.qs[k].t=='essay'){const img=await shrink($('#p'+k).files[0]);if(img)await setDoc(doc(db,'essays',id+'_'+U.id+'_'+k),{eid:id,aid:id+'_'+U.id,sid:U.id,tid:e.tid,qi:k,img})}
+for(let k=0;k<e.qs.length;k++)if(e.qs[k].t=='essay'){const img=await shrink($('#p'+k).files[0]),txt=($('#tx'+k)?.value||'').trim().slice(0,4000);if(img||txt)await setDoc(doc(db,'essays',id+'_'+U.id+'_'+k),{eid:id,aid:id+'_'+U.id,sid:U.id,tid:e.tid,qi:k,img,txt})}
 localStorage.removeItem(dk);toast(`تم التسليم. اختيار من متعدد: ${m}/${mt}${ne?' — المقالي يصححه المدرس':''}`);location.hash=e.kind=='hw'?'#/hw':'#/student'}catch(x){sent=false;toast('تعذر التسليم: '+x.message)}};
 $('#f').onsubmit=ev2=>{ev2.preventDefault();send()};paint();
 window.tm=setInterval(()=>{el++;paint();if(el%5==0)save();if(limit&&el>=limit)send()},1000);
