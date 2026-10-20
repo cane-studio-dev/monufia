@@ -184,3 +184,26 @@ label small{display:block}.row label{flex:1;min-width:130px}
 button.r::after,button.g::after,.noprint button::after,.row button::after{font-size:.8em}
 @media (prefers-reduced-motion:reduce){:is(button,.btn)::before,:is(button,.btn)::after{animation:none!important;transition:none!important}}
 [data-t=violet] :is(button,.btn),[data-t=slate] :is(button,.btn),[data-t=ocean] :is(button,.btn),[data-t=forest] :is(button,.btn){color:#fff}
+
+[hidden]{display:none!important}
+/* v10: سنتر العرب */
+.vid{position:relative;margin:8px 0;border-radius:14px;overflow:hidden}.vid iframe{display:block;width:100%;aspect-ratio:16/9;border:0}
+.wm{position:absolute;top:10px;inset-inline-end:10px;display:flex;align-items:center;gap:5px;background:rgba(10,26,74,.6);color:#fff;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px;pointer-events:none;backdrop-filter:blur(4px)}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:14px 0}.mc{background:var(--c);border:1px solid var(--gb,var(--b));border-radius:20px;padding:16px;box-shadow:var(--sh)}.mc h3{margin:0 0 6px}.mc p{margin:0}
+table.cmp th,table.cmp td{vertical-align:top;min-width:120px}.guide h4{margin:12px 0 4px}.guide ol,.guide ul{padding-inline-start:22px;margin:6px 0}.guide summary{font-size:17px}
+.chks{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2px}
+/* v11: شكل التطبيق */
+.opt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--gb,var(--b));border-radius:16px;margin:8px 0;cursor:pointer;background:var(--inp,transparent)}.opt input{width:auto;margin:6px 0 0}.opt span{line-height:1.6}
+.chipbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.chipbar button{background:var(--inp,var(--bg));color:var(--t);border:1px solid var(--gb,var(--b));box-shadow:none;margin:0;font-size:14px;padding:6px 12px}.chipbar button.on{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;border-color:transparent}
+.gf{margin:12px 0;text-align:center}.gf img{width:100%;max-width:420px;border-radius:18px;border:1px solid var(--gb,var(--b));box-shadow:var(--sh)}.gf figcaption{font-size:13px;opacity:.75;margin-top:6px}
+.apphead{display:flex;align-items:center;gap:12px;padding:14px 16px}.apphead img{border-radius:16px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:0 0 16px}.tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;min-height:96px;padding:12px 6px;border-radius:20px;background:var(--c);border:1px solid var(--gb,var(--b));box-shadow:var(--sh);color:var(--t);text-decoration:none;transition:.2s}.tile:hover,.tile:active{transform:translateY(-3px) scale(1.02);border-color:var(--p)}.tile span{font-size:28px;line-height:1}.tile b{font-size:13px;font-weight:700}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(4,1fr)}}
+body{padding-bottom:calc(92px + env(safe-area-inset-bottom))}
+#tb{position:fixed;z-index:60;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(94vw,560px);display:flex;justify-content:space-around;align-items:stretch;padding:6px;border-radius:26px;background:var(--glass,var(--c));backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid var(--gb,var(--b));box-shadow:0 12px 40px rgba(0,0,0,.22)}
+#tb a{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:6px 2px;border-radius:20px;color:var(--t);text-decoration:none;opacity:.75;transition:.2s;min-width:0}#tb a span{font-size:21px;line-height:1.1}#tb a small{font-size:11px;font-weight:700;white-space:nowrap}
+#tb a.on{opacity:1;background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;box-shadow:0 6px 18px rgba(79,70,229,.35)}
+nav{position:sticky;top:8px;z-index:50}
+@media(display-mode:standalone){body{-webkit-user-select:none;user-select:none}input,textarea,.sr{-webkit-user-select:text;user-select:text}}
+main{animation:up .35s}
+@media print{#tb,nav,#ft{display:none!important}body{padding-bottom:0}}
