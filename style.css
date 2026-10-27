@@ -244,3 +244,33 @@ main{animation:up .35s}
 #rpt{width:100%;box-sizing:border-box;font-size:14px;line-height:1.7}
 #dk{margin:0}
 @media print{}
+
+/* v14 */
+.vid video{display:block;width:100%;aspect-ratio:16/9;background:#000;object-fit:contain}
+.opt{display:block;width:100%;text-align:start;margin:6px 0;background:var(--inp,#222);color:var(--t);border:1px solid var(--gb,var(--b));box-shadow:none}
+.opt.good{background:#16a34a;color:#fff;border-color:#16a34a}.opt.bad2{background:#dc2626;color:#fff;border-color:#dc2626}
+.vload{aspect-ratio:16/9;background:#000;display:flex;align-items:center;justify-content:center}
+.vload .btn{margin:0}
+
+/* v16 */
+.bar{height:8px;border-radius:6px;background:rgba(128,128,160,.25);overflow:hidden;margin:6px 0 10px}.bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,var(--p),var(--p2,#ec4899));transition:width .1s linear}
+.risk{border-inline-start:5px solid #9ca3af}.risk.r3{border-color:#dc2626}.risk.r2{border-color:#f59e0b}.risk.r1{border-color:#16a34a}
+.risk ul{margin:6px 0;padding-inline-start:20px}.nxc.warn{border-color:#f59e0b;background:linear-gradient(135deg,rgba(245,158,11,.18),rgba(220,38,38,.1))}
+.stc{display:flex;align-items:center;gap:10px}
+
+/* v17 — بطاقات الهوية وهوية MARWAN DEV */
+.mdv{display:flex;align-items:center;justify-content:center;gap:12px;margin:18px auto 6px;padding:12px 18px;border-radius:18px;max-width:420px;background:linear-gradient(135deg,rgba(15,23,42,.92),rgba(79,70,229,.9));color:#fff;box-shadow:0 8px 24px rgba(79,70,229,.25)}
+.mdv img{width:46px;height:46px;border-radius:12px}.mdv b{display:block;font-size:22px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif}.mdv small{opacity:.85;font-size:12px}
+footer .mdv{margin-top:14px}
+.avp{width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid var(--p)}
+.idc{max-width:520px;margin:12px auto;border-radius:22px;overflow:hidden;background:#fff;color:#111827;box-shadow:0 12px 34px rgba(79,70,229,.28);border:1px solid rgba(79,70,229,.25)}
+.idh{display:flex;align-items:center;gap:12px;padding:14px 18px;background:linear-gradient(135deg,#4f46e5,#ec4899);color:#fff}.idh img{width:44px;height:44px}.idh b{display:block;font-size:20px}.idh small{opacity:.9}
+.idc.t .idh{background:linear-gradient(135deg,#0f172a,#4f46e5)}
+.idb{display:flex;gap:14px;padding:16px;align-items:flex-start;flex-wrap:wrap}
+.idp{width:96px;height:96px;border-radius:50%;overflow:hidden;background:#4f46e5;color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;font-weight:700;flex:none;border:3px solid #e0e7ff}.idp img{width:100%;height:100%;object-fit:cover}
+.idi{flex:1;min-width:150px}.idi h3{margin:0 0 6px;font-size:20px;color:#111827}.idi p{margin:3px 0;display:flex;flex-direction:column}.idi small{color:#6b7280;font-size:11px}.idi b{font-size:14px;color:#111827}
+.idq{flex:none;background:#fff;padding:4px;border:1px solid #e5e7eb;border-radius:8px;min-width:112px;min-height:112px;display:flex;align-items:center;justify-content:center}
+.idd{margin:0 16px 10px;color:#4b5563;font-size:13px}
+.idf{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;background:#f3f4f6;border-top:1px solid #e5e7eb}.idf img{width:44px;height:44px;border-radius:10px}.idf b{display:block;font-size:22px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;color:#111827}.idf small{color:#6b7280}
+.cert-i{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(128,128,160,.2)}.qc{flex:none;background:#fff;padding:3px;border-radius:6px;min-width:84px;min-height:84px}
+body.pcard #app>*:not(.pcw),body.pcard nav,body.pcard #tb,body.pcard footer,body.pcard #ft{display:none!important}
