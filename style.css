@@ -274,3 +274,6 @@ footer .mdv{margin-top:14px}
 .idf{display:flex;align-items:center;justify-content:center;gap:12px;padding:12px;background:#f3f4f6;border-top:1px solid #e5e7eb}.idf img{width:44px;height:44px;border-radius:10px}.idf b{display:block;font-size:22px;letter-spacing:2px;font-family:Arial,Helvetica,sans-serif;color:#111827}.idf small{color:#6b7280}
 .cert-i{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(128,128,160,.2)}.qc{flex:none;background:#fff;padding:3px;border-radius:6px;min-width:84px;min-height:84px}
 body.pcard #app>*:not(.pcw),body.pcard nav,body.pcard #tb,body.pcard footer,body.pcard #ft{display:none!important}
+/* v18 billing */
+.bnr.er{background:#b3261e;color:#fff;text-align:right;line-height:1.7;font-weight:600}.bnr.wn{background:#b26a00;color:#fff;text-align:right;line-height:1.7;font-weight:600}.bnr.er a,.bnr.wn a{color:#fff;text-decoration:underline;font-weight:800}
+@media print{body.pbill #app>*:not(.pbw),body.pbill nav,body.pbill #tb,body.pbill footer,body.pbill #ft,body.pbill #bn,body.pbill .noprint{display:none!important}body.pbill{background:#fff!important;color:#000!important}body.pbill .card{box-shadow:none;border:1px solid #ccc;background:#fff;color:#000;break-inside:avoid}body.pbill table{width:100%;font-size:12px}}
