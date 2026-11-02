@@ -1,4 +1,4 @@
-const C='sa-v24';
+const C='sa-v25';
 const SHELL=['./','index.html','app.js','style.css','config.js','manifest.json','icon.svg','icon-192.png','icon-512.png','marwandev.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>Promise.all(SHELL.map(u=>c.add(u).catch(()=>{})))).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));
