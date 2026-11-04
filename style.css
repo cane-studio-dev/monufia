@@ -345,3 +345,8 @@ button,.btn,#tb a,.tile{min-height:44px}
 .pbw table th,.pbw table td{word-break:normal}
 @media print{#rt{min-width:0}#rt th,#rt td{white-space:normal;padding:4px 5px;font-size:11px}}
 .warnc{border:2px solid #e74c3c}
+.stars{display:block;color:#f5a623}.rs button{background:none;border:0;font-size:26px;color:#999;padding:0 2px;cursor:pointer}.rs button.on{color:#f5a623}
+.dmm{max-height:55vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:8px 0}.mi{max-width:100%;max-height:260px;border-radius:10px;margin-top:6px}.msg audio{max-width:100%;margin-top:6px}
+.att{display:flex;gap:8px;align-items:center;margin:6px 0;flex-wrap:wrap}.att button{font-size:20px;padding:6px 12px}.att small a{color:#e74c3c}
+.ovl{position:fixed;inset:0;background:#0009;z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px}.ovl .card{width:100%;max-width:480px}.ovl textarea{width:100%;min-height:120px}
+.rcm{width:100%;margin:6px 0}
